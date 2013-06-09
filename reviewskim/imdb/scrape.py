@@ -1,54 +1,6 @@
-
-import urlparse
-from bs4 import BeautifulSoup
-import urllib2
 import re
-from reviewskim.utils.web import url_join
-
-
-def get_soup(url):
-    """
-        Code inspired by http://www.markbartlett.org/web-engineering/web-engineering-1/page-scraping-with-urllib2-beautifulsoup
-    """
-    user_agent='Mozilla/5.0 (Windows NT 5.1) AppleWebKit/535.19 (KHTML, like Gecko) Chrome/18.0.1025.142 Safari/535.19',
-    headers = { 'User-Agent' : user_agent }
-#
-    temp = urllib2.Request(url, '', headers)
-    temp = urllib2.urlopen(temp)
-    soup = BeautifulSoup(temp)
-    return soup
-
-
-def clean_unicode(string):
-    """ Convert unicode to string.
-        Note, replace unicode dash with regular dash. """
-    string=string.replace(u'\x96','-')
-    string=string.replace(u'\x97','-')
-    return unicode(string)
-
-
-def clean_html(review_text):
-    """ The review has a bunch of text + html formatting.
-        Clean the review up by pulling out all the text,
-        adding missing periods, and 
-    """
-    text=review_text.findAll(text=True)
-
-    # remove garbage (new lines, etc ...) from beginning and end of text
-    text=[i.strip() for i in text]
-
-    # add in missing exclamations
-    text=[i if i[-1] in ['.','!','?'] else i+'.' for i in text]
-
-    # join all the text with spaces
-    text=' '.join(text)
-
-    # remove new lines
-    text=text.replace('\n', ' ')
-
-    # convert multiple spaces to single spaces
-    text=re.sub('\s+',' ',text)
-    return clean_unicode(text)
+from reviewskim.utils.web import url_join, get_html_text, get_soup
+from reviewskim.utils.strings import clean_unicode
 
 
 
@@ -92,7 +44,8 @@ def scrape_movie(imdb_movie_key, fast=False, debug=False):
         review_page_url=url_join(main_page_url,'reviews?start=%s' % n)
         soup = get_soup(review_page_url)
 
-        # match on user avitars
+        # find all reviews on the page
+        # The easiest way si to match on user avatars:
         all_reviews_html = soup.findAll('img',**{'class':"avatar"})
 
         if debug:
@@ -100,7 +53,6 @@ def scrape_movie(imdb_movie_key, fast=False, debug=False):
 
 
         def get_review(review):
-            
 
             # Most reviews begin with the text 
             #   > "XXX out of XXX found the following review useful:"
@@ -154,11 +106,11 @@ def scrape_movie(imdb_movie_key, fast=False, debug=False):
 
 
             _review_text=_date.next.next.next.next
-            review_text=clean_html(_review_text)
+            review_text=get_html_text(_review_text)
             if review_text=='*** This review may contain spoilers ***.':
                 spoilers=True
                 _review_text=_review_text.next.next.next.next
-                review_text=clean_html(_review_text)
+                review_text=get_html_text(_review_text)
             else:
                 spoilers=False
 
@@ -188,4 +140,55 @@ def scrape_movie(imdb_movie_key, fast=False, debug=False):
         assert len(reviews) == nreviews
 
     return dict(nreviews=nreviews, reviews=reviews)
+
+def get_top_movies(year, number, debug=False):
+    """ Pull out the 'number' highest-grosing
+        movies of the year.
+    """
+    NUM_MOVIES_PER_PAGE=50
+
+    # Note, the webpage gives 50 movies at a time
+    assert number % NUM_MOVIES_PER_PAGE==0
+
+    def get_website(start,year):
+        website='http://www.imdb.com/search/title?at=0&sort=boxoffice_gross_us&start=%s&title_type=feature&year=%s,%s' % (start,year,year)
+        return website
+
+    n=1
+
+    ret_list=[]
+
+    while n<number:
+        print 'n=%s/%s' % (n,number)
+        url_page = get_website(start=n,year=year)
+
+        print url_page
+        n+=NUM_MOVIES_PER_PAGE
+
+        # I don't get why, but IMDB barfs when I specify a user agent???
+        soup=get_soup(url_page,no_user_agent=True)
+
+        # Match on <td class="number">, which refers to the ranking of the movie
+        all_movies=soup.findAll('td',**{'class':"number"})
+
+        for movie in all_movies:
+            title_part=movie.next.next.next.next.next.next.next.next.next.next.next.next.next
+
+            title=title_part.next
+
+            link=str(title_part['href'])
+            m=re.match('/title/(tt\d+)/',link)
+            groups=m.groups()
+            assert len(groups)==1
+            imdb_id=groups[0]
+
+            _year=title_part.next.next.next.next
+            m=re.match(r'\((\d+)\)',_year)
+            groups=m.groups()
+            assert len(groups)==1
+            year=groups[0]
+
+            ret_list.append(dict(title=title,imdb_id=imdb_id,year=year))
+
+    return ret_list
 
