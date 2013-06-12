@@ -121,7 +121,7 @@ def scrape_movie(imdb_movie_id, debug=False):
         imdb_movie_id should be of the form tt1980209
     """
 
-    main_page_url = url_join('http://www.imdb.com/title/',imdb_movie_id)
+    main_page_url = url_join('http://www.imdb.com/title/','tt%d' % imdb_movie_id)
     if debug:
         print main_page_url
 
@@ -197,7 +197,7 @@ def get_top_movies(year, number, debug=False):
             title=clean_unicode(title_part.next)
 
             link=str(title_part['href'])
-            m=re.match('/title/(tt\d+)/',link)
+            m=re.match('/title/tt(\d+)/',link)
             groups=m.groups()
             assert len(groups)==1
             imdb_movie_id=str(groups[0])
