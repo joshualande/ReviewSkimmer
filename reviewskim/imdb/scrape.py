@@ -1,9 +1,12 @@
 import re
+from collections import OrderedDict
+import datetime
+
 from reviewskim.utils.web import url_join, get_html_text, get_soup
 from reviewskim.utils.strings import clean_unicode
 
 
-def get_review_from_page(review):
+def get_review_from_page(review,imdb_movie_id):
     """ Pull out a single review form an IMDB
         movie review page.
 
@@ -17,12 +20,13 @@ def get_review_from_page(review):
     m=re.match('(\d+) out of (\d+) people found the following review useful:', str(_quality_of_review))
     if m is not None and len(m.groups())==2:
         groups=m.groups()
-        quality_of_review = [int(groups[0]), int(groups[1])]
+        num_likes = int(groups[0])
+        num_dislikes = int(groups[1])-int(groups[0])
     else:
-        quality_of_review = None
+        num_likes = num_dislikes = None
 
     _title=review.next.next.next
-    title=clean_unicode(_title)
+    review_title=clean_unicode(_title)
 
     # the next thing to look for is the review score.
     # Note that this doesn't not always exist:
@@ -34,47 +38,49 @@ def get_review_from_page(review):
         review_score=[int(review_score[0]),int(review_score[1])]
         assert review_score[0] in range(1,11)
         assert review_score[1]==10
+        review_score=review_score[0]
 
-        _author=_title.next.next.next.contents[3].next
+        _reviewer=_title.next.next.next.contents[3].next
     else:
-        # No user review, jump to author
+        # No user review, jump to reviewer
         review_score=None
-        _author=_title.next.next.next.next.next.next
+        _reviewer=_title.next.next.next.next.next.next
 
 
-    if _author == ' ':
+    if _reviewer == ' ':
         # for some reason, I think some reviewers don't have
-        # an author name. I found this problem here:
+        # a reviewer name. I found this problem here:
         #   http://www.imdb.com/title/tt1408101/reviews?start=120
-        author=None
-        _place=_author.next.next
-    elif hasattr(_author,'name') and _author.name == 'br':
-        # this happens when there is no author and no place!
+        reviewer=None
+        _review_place=_reviewer.next.next
+    elif hasattr(_reviewer,'name') and _reviewer.name == 'br':
+        # this happens when there is no reviewer and no place!
         # This happend at: http://www.imdb.com/title/tt1392170/reviews?start=1340
         # If so, move the '_place' up the "<small>8 April 2012</small>"
         # html so that it will get caught at the next condition
-        author=None
-        _place=_author.next.next 
+        reviewer=None
+        _review_place=_reviewer.next.next 
     else:
-        author=clean_unicode(_author)
-        _place=_author.next.next.next
+        reviewer=clean_unicode(_reviewer)
+        _review_place=_reviewer.next.next.next
 
-    if hasattr(_place,'name') and _place.name == 'small':
+    if hasattr(_review_place,'name') and _review_place.name == 'small':
         # this happens when there is no place.
         # If so, skip on to date
         # For an example of this ...
-        place = None
-        _date = _place.next
+        review_place = None
+        _date = _review_place.next
     else:
-        m = re.match('from (.+)', _place)
+        m = re.match('from (.+)', _review_place)
         groups=m.groups()
         assert len(groups)==1
-        place = groups[0]
-        place=place
+        review_place = groups[0]
+        review_place=review_place
 
-        _date=_place.next.contents[1].next
+        _date=_review_place.next.contents[1].next
 
     date=str(_date)
+    date=datetime.datetime.strptime(date,'%d %B %Y')
 
 
     _review_text=_date.next.next.next.next
@@ -87,18 +93,21 @@ def get_review_from_page(review):
         spoilers=False
 
     d=dict(
-            title=title,
+            review_title=review_title,
             date=date,
             review_score=review_score,
-            author=author,
-            place=place,
+            reviewer=reviewer,
+            review_place=review_place,
             review_text=review_text,
             spoilers=spoilers,
-            quality_of_review = quality_of_review)
+            num_likes = num_likes,
+            num_dislikes = num_dislikes,
+            imdb_movie_id=imdb_movie_id,
+    )
     return d
 
 
-def get_reviews_from_page(imdb_review_webpage, debug=False):
+def get_reviews_from_page(imdb_review_webpage, imdb_movie_id, debug=False):
 
     soup = get_soup(imdb_review_webpage)
 
@@ -106,29 +115,25 @@ def get_reviews_from_page(imdb_review_webpage, debug=False):
     # The easiest way si to match on user avatars:
     all_reviews_html = soup.findAll('img',**{'class':"avatar"})
 
-    if debug:
-        print ' * url=%s, num reviews on page=%s' % (imdb_review_webpage,len(all_reviews_html))
-
-    reviews = map(get_review_from_page,all_reviews_html)
+    reviews = [get_review_from_page(i,imdb_movie_id) for i in all_reviews_html]
+    for review in reviews:
+        review['review_url']=imdb_review_webpage
     return reviews
 
 
 
 
-def scrape_movie(imdb_movie_id, debug=False):
+def scrape_movie(imdb_movie_id, debug=False, fast=False):
     """ If fast, only scrape first page
 
         imdb_movie_id should be of the form tt1980209
     """
 
-    main_page_url = url_join('http://www.imdb.com/title/','tt%d' % imdb_movie_id)
-    if debug:
-        print main_page_url
+    main_page_url = url_join('http://www.imdb.com/title/','tt%07d' % imdb_movie_id)
 
     soup = get_soup(main_page_url)
 
     # find the 'See all XXX user reviews' text on the webpage
-
     pattern=re.compile('See all ([\d,]+) user reviews')
     reviews=soup.findAll('a', text=pattern)
 
@@ -149,20 +154,95 @@ def scrape_movie(imdb_movie_id, debug=False):
 
     reviews = []
 
-    print 'nreviews=',nreviews
+    # read in title
+    _title=soup.findAll('title')
+    assert len(_title)==1
+    _title=_title[0]
+    _title=clean_unicode(_title.next)
+    f=re.match('(.+) \((\d+)\) - IMDb',_title)
+    groups=f.groups()
+    assert len(groups)==2
+    movie_name,release_year=groups
+    release_year=int(release_year)
+
+    # read the poster
+    poster=soup.findAll("img",itemprop="image",  title=re.compile('Poster'))
+    assert len(poster)==1
+    imdb_poster_thumbnail_url=poster[0]['src']
+    imdb_poster_url=imdb_poster_thumbnail_url.split('._V')[0]+'.jpg'
+
+    # read in release date
+    temp=soup.findAll("h4",**{"text":"Release Date:"})
+    assert len(temp)==1
+    _release_date=temp[0].next.next
+    _release_date=str(_release_date)
+    g=re.match('\s+(.+) \(\w+\)',_release_date)
+    groups=g.groups()
+    assert len(groups)==1
+    release_date=groups[0]
+    release_date=datetime.datetime.strptime(release_date,'%d %B %Y')
+
+    assert release_date.year == release_year
+
+    # get out the box office 
+    val=soup.findAll('h4',**{"class":"inline","text":"Budget:"})
+    assert len(val)==1
+    val=val[0]
+    val=val.next.next.strip()
+    if val[0]=='$':
+        val=val[1:].replace(',','')
+        budget = float(val)
+    else:
+        # This happens when budgets are in other currencies.
+        # For example, http://www.imdb.com/title/tt0211915/
+        budget = None 
+
+    # get the gross
+    val=soup.findAll('h4',**{"class":"inline","text":'Gross:'})
+    assert len(val)==1
+    val=val[0]
+    val=val.next.next.strip()
+    assert val[0]=='$'
+    val=val[1:].replace(',','')
+    gross = float(val)
+
+    description=soup.findAll('div', itemprop="description")
+    assert len(description)==1
+    description=description[0]
+    description=description.next.next.get_text()
+    description=re.sub('\s+',' ',description)
 
     while n < nreviews:
         imdb_review_webpage=url_join(main_page_url,'reviews?start=%s' % n)
-        reviews += get_reviews_from_page(imdb_review_webpage, debug)
+
+
+        if n % 50 ==0 and debug:
+            print ' * n=%d/%d' % (n, nreviews)
+
+
+        reviews += get_reviews_from_page(imdb_review_webpage, imdb_movie_id, debug)
 
         n+=10 # imdb pages increment in steps of 10
+        if fast: break
 
     for i,review in enumerate(reviews):
         review['imdb_review_ranking'] = i
 
-    assert len(reviews) == nreviews,'reviews=%s, nreviews=%s' % (len(reviews),nreviews)
+    if not fast:
+        assert len(reviews) == nreviews,'reviews=%s, nreviews=%s' % (len(reviews),nreviews)
 
-    return dict(nreviews=nreviews, reviews=reviews)
+    return dict(
+            imdb_movie_id=imdb_movie_id,
+            imdb_movie_url=main_page_url,
+            nreviews=nreviews, 
+            budget=budget,
+            gross=gross,
+            imdb_description=description,
+            imdb_poster_url=imdb_poster_url,
+            imdb_poster_thumbnail_url=imdb_poster_thumbnail_url,
+            movie_name=movie_name,
+            release_date=release_date,
+            reviews=reviews)
 
 def get_top_movies(year, number, debug=False):
     """ Pull out the 'number' highest-grosing
@@ -176,7 +256,7 @@ def get_top_movies(year, number, debug=False):
 
     n=1
 
-    ret_list=dict()
+    ret_list=OrderedDict()
 
     while n<number:
         print 'n=%s/%s' % (n,number)
@@ -194,21 +274,21 @@ def get_top_movies(year, number, debug=False):
         for movie in all_movies:
             title_part=movie.next.next.next.next.next.next.next.next.next.next.next.next.next
 
-            title=clean_unicode(title_part.next)
+            movie_name=clean_unicode(title_part.next)
 
             link=str(title_part['href'])
             m=re.match('/title/tt(\d+)/',link)
             groups=m.groups()
             assert len(groups)==1
-            imdb_movie_id=str(groups[0])
+            imdb_movie_id=int(groups[0])
 
             _year=title_part.next.next.next.next
             m=re.match(r'\((\d+)\)',_year)
             groups=m.groups()
             assert len(groups)==1
-            year=str(groups[0])
+            year=int(groups[0])
 
-            ret_list[imdb_movie_id]=dict(title=title,year=year)
+            ret_list[imdb_movie_id]=dict(movie_name=movie_name,year=year)
 
             # if only a few movies are requested
             if len(ret_list) == number:

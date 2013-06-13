@@ -49,7 +49,7 @@ def get_html_text(review_text):
     text=review_text.findAll(text=True)
 
     # remove garbage (new lines, etc ...) from beginning and end of text
-    text=[i.strip() for i in text]
+    text=[i.strip() for i in text if i.strip() != '']
 
     # add in missing exclamations
     text=[i if i[-1] in ['.','!','?'] else i+'.' for i in text]
