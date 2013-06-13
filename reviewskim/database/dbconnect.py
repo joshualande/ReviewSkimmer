@@ -23,7 +23,7 @@ class IMDBDatabaseConnector(object):
         db.query("""
             CREATE TABLE rs_movies (
             rs_imdb_movie_id INT NOT NULL PRIMARY KEY,
-            rs_movie_name TEXT NOT NULL CHARACTER SET utf8,
+            rs_movie_name TEXT NOT NULL,
             rs_budget INT,
             rs_gross INT,
             rs_imdb_movie_url TEXT NOT NULL,
@@ -38,7 +38,9 @@ class IMDBDatabaseConnector(object):
 
         db.query("""
             CREATE TABLE rs_reviews (
+            primary key (rs_imdb_movie_id, rs_imdb_reviewer_id),
             rs_imdb_movie_id INT NOT NULL,
+            rs_imdb_reviewer_id INT NOT NULL,
             rs_reviwer TEXT,
             rs_review_movie_score INT,
             rs_review_date DATE NOT NULL,
@@ -47,8 +49,8 @@ class IMDBDatabaseConnector(object):
             rs_review_spoilers BOOL NOT NULL,
             rs_imdb_review_ranking INT,
             rs_review_place TEXT,
-            rs_review_url TEXT NOT NULL,
-            rs_review_text TEXT CHARACTER SET utf8
+            rs_imdb_review_url TEXT NOT NULL,
+            rs_review_text TEXT
             );
         """)
 
@@ -94,6 +96,7 @@ class IMDBDatabaseConnector(object):
         c=self.cursor
 
         rs_imdb_movie_id=review['imdb_movie_id']
+        rs_imdb_reviewer_id=review['imdb_reviewer_id']
         reviwer=review['reviewer']
         review_movie_score=review['review_score']
         review_date=review['date'].strftime('%Y-%m-%d')
@@ -102,16 +105,16 @@ class IMDBDatabaseConnector(object):
         review_spoilers=review['spoilers']
         imdb_review_ranking=review['imdb_review_ranking']
         review_place=review['review_place']
-        review_url=urllib.unquote(review['review_url'])
-        review_text=review['review_text']
+        imdb_review_url=urllib.unquote(review['imdb_review_url'])
+        imdb_review_text=review['imdb_review_text']
 
         c.execute("""
             INSERT INTO rs_reviews 
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
-            (rs_imdb_movie_id,reviwer,review_movie_score, 
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
+            (rs_imdb_movie_id,rs_imdb_reviewer_id,reviwer,review_movie_score, 
                 review_date,review_num_likes, review_num_dislikes, 
                 review_spoilers, imdb_review_ranking,review_place, 
-                review_url, review_text)
+                imdb_review_url, imdb_review_text)
         )
 
         # This is necessary: http://mysql-python.sourceforge.net/MySQLdb.html
@@ -163,7 +166,7 @@ class IMDBDatabaseConnector(object):
         reviews=c.fetchall()
         return reviews
 
-    def has_movie(self,imdb_movie_id):
+    def in_database(self,imdb_movie_id):
         """ Test if a movie with a given imdb movie id is in the database. """
         c=self.cursor
 
@@ -192,7 +195,7 @@ class IMDBDatabaseConnector(object):
             return None
     
     def rs_imdb_poster_thumbnail_url(self,imdb_movie_id):
-        assert self.has_movie(imdb_movie_id)
+        assert self.in_database(imdb_movie_id)
         c=self.cursor
 
         ex=c.execute("""

@@ -1,6 +1,9 @@
 import re
+import os
+import urllib
 from collections import OrderedDict
 import datetime
+from os.path import expandvars,join
 
 from reviewskim.utils.web import url_join, get_html_text, get_soup
 from reviewskim.utils.strings import clean_unicode
@@ -12,7 +15,6 @@ def get_review_from_page(review,imdb_movie_id):
 
         review is a soup object anchored on a reviewer's avatar.
     """
-
     # Most reviews begin with the text 
     #   > "XXX out of XXX found the following review useful:"
     # we have to back up to find it, but sometimes it doesn't exist
@@ -46,6 +48,11 @@ def get_review_from_page(review,imdb_movie_id):
         review_score=None
         _reviewer=_title.next.next.next.next.next.next
 
+    reviewer_url=_reviewer.previous['href']
+    m=re.match('/user/ur(\d+)/',reviewer_url)
+    groups=m.groups()
+    assert len(groups)==1
+    imdb_reviewer_id = int(groups[0])
 
     if _reviewer == ' ':
         # for some reason, I think some reviewers don't have
@@ -84,11 +91,11 @@ def get_review_from_page(review,imdb_movie_id):
 
 
     _review_text=_date.next.next.next.next
-    review_text=get_html_text(_review_text)
-    if review_text=='*** This review may contain spoilers ***.':
+    imdb_review_text=get_html_text(_review_text)
+    if imdb_review_text=='*** This review may contain spoilers ***.':
         spoilers=True
         _review_text=_review_text.next.next.next.next
-        review_text=get_html_text(_review_text)
+        imdb_review_text=get_html_text(_review_text)
     else:
         spoilers=False
 
@@ -98,11 +105,12 @@ def get_review_from_page(review,imdb_movie_id):
             review_score=review_score,
             reviewer=reviewer,
             review_place=review_place,
-            review_text=review_text,
+            imdb_review_text=imdb_review_text,
             spoilers=spoilers,
             num_likes = num_likes,
             num_dislikes = num_dislikes,
             imdb_movie_id=imdb_movie_id,
+            imdb_reviewer_id=imdb_reviewer_id,
     )
     return d
 
@@ -117,13 +125,14 @@ def get_reviews_from_page(imdb_review_webpage, imdb_movie_id, debug=False):
 
     reviews = [get_review_from_page(i,imdb_movie_id) for i in all_reviews_html]
     for review in reviews:
-        review['review_url']=imdb_review_webpage
+        review['imdb_review_url']=imdb_review_webpage
     return reviews
 
 
 
 
-def scrape_movie(imdb_movie_id, debug=False, fast=False):
+def scrape_movie(imdb_movie_id, poster_dir, poster_thumbnail_dir,
+                 debug=False, fast=False):
     """ If fast, only scrape first page
 
         imdb_movie_id should be of the form tt1980209
@@ -170,6 +179,19 @@ def scrape_movie(imdb_movie_id, debug=False, fast=False):
     assert len(poster)==1
     imdb_poster_thumbnail_url=poster[0]['src']
     imdb_poster_url=imdb_poster_thumbnail_url.split('._V')[0]+'.jpg'
+
+    print ' * downloading thumbnail poster %s' % imdb_poster_thumbnail_url
+
+    local_poster_thumbnail_filename=expandvars(join(poster_thumbnail_dir,'poster_thumbnail_%s.jpg' % imdb_movie_id))
+    # download the poster
+    urllib.urlretrieve(imdb_poster_thumbnail_url,local_poster_thumbnail_filename)
+    assert os.stat(local_poster_thumbnail_filename).st_size>0
+
+    print ' * downloading poster %s' % imdb_poster_url
+
+    local_poster_filename=expandvars(join(poster_dir,'poster_%s.jpg' % imdb_movie_id))
+    urllib.urlretrieve(imdb_poster_url, local_poster_filename)
+    assert os.stat(local_poster_filename).st_size>0
 
     # read in release date
     temp=soup.findAll("h4",**{"text":"Release Date:"})
