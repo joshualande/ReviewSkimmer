@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block body %}
+
+{% if imdb_movie_id %}
+
+"{{ movie_name }}" found in database with IMDB Movie ID={{ imdb_movie_id }}!
+
+<imb src="{{ thumbnail_url }}" />
+
+{% else %}
+    "{{ movie_name}}" not found in database!
+{% endif %}
+
+
+
+<img src="{{ thumbnail_url }}" />
+
+{% endblock %}

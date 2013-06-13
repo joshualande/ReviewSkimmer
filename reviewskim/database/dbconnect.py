@@ -1,13 +1,14 @@
-from datetime import datetime
+from datetime import datetime 
 import urllib
-
+import getpass
+import MySQLdb
 
 class IMDBDatabaseConnector(object):
     """ Class to interface with the movie database. """
 
-    def __init__(self,db):
+    def __init__(self, db):
         self.db=db
-        self.cursor=db.cursor()
+        self.cursor=self.db.cursor()
 
     def delete_db(self):
         """ Delete all tables from the IMDB databse. """
@@ -22,7 +23,7 @@ class IMDBDatabaseConnector(object):
         db.query("""
             CREATE TABLE rs_movies (
             rs_imdb_movie_id INT NOT NULL PRIMARY KEY,
-            rs_movie_name TEXT NOT NULL,
+            rs_movie_name TEXT NOT NULL CHARACTER SET utf8,
             rs_budget INT,
             rs_gross INT,
             rs_imdb_movie_url TEXT NOT NULL,
@@ -162,7 +163,7 @@ class IMDBDatabaseConnector(object):
         reviews=c.fetchall()
         return reviews
 
-    def in_database(self,imdb_movie_id):
+    def has_movie(self,imdb_movie_id):
         """ Test if a movie with a given imdb movie id is in the database. """
         c=self.cursor
 
@@ -173,3 +174,31 @@ class IMDBDatabaseConnector(object):
         l=len(c.fetchall())
         assert l<=1
         return l==1
+
+    def get_imdb_movie_id(self,movie_name):
+        """ Test if a movie with a given imdb movie id is in the database. """
+        c=self.cursor
+
+        ex=c.execute("""
+            select rs_imdb_movie_id FROM rs_movies WHERE rs_movie_name=%s""",
+            (movie_name,)
+        )
+        l=c.fetchall()
+        assert len(l)<=1
+        if len(l)==1:
+            print 'l=',l,'x'*100
+            return l[0][0]
+        else:
+            return None
+    
+    def rs_imdb_poster_thumbnail_url(self,imdb_movie_id):
+        assert self.has_movie(imdb_movie_id)
+        c=self.cursor
+
+        ex=c.execute("""
+            select rs_imdb_poster_thumbnail_url FROM rs_movies WHERE rs_imdb_movie_id=%s""",
+            (imdb_movie_id,)
+        )
+        l=c.fetchall()
+        assert len(l)==1
+        return l[0][0]
