@@ -16,7 +16,7 @@ class IMDBDatabaseConnector(object):
         db.query("DROP TABLE rs_movies")
         db.query("DROP TABLE rs_reviews")
 
-    def create_movie_schema(self):
+    def create_schema(self):
         """ Create the schema for the IMDB reviews databse.
         """
         db=self.db

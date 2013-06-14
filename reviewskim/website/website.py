@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+from os.path import join
 
 from flask import Flask
 from flask import render_template
@@ -9,12 +10,18 @@ from flask import request
 app = Flask(__name__)
 app.config.from_envvar('REVIEWSKIM_SETTINGS')
 
-db = app.config['DB']
 
 from reviewskim.database.dbconnect import IMDBDatabaseConnector
+db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
 
 app.debug=True
+
+reviewskim_media_dir=app.config['REVIEWSKIM_MEDIA_DIR']
+
+def get_poster_thumbnail(imdb_movie_id):
+    path='https://s3-us-west-2.amazonaws.com/reviewskimmer/poster_thumbnail_%d.jpg' % imdb_movie_id
+    return path
 
 @app.route('/')
 def index():
@@ -26,7 +33,7 @@ def search():
 
     imdb_movie_id=connector.get_imdb_movie_id(movie_name)
     if imdb_movie_id is not None:
-        thumbnail_url=connector.rs_imdb_poster_thumbnail_url(imdb_movie_id)
+        thumbnail_url=get_poster_thumbnail(imdb_movie_id)
     else:
         thumbnail_url=None
 
