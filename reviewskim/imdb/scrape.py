@@ -4,6 +4,7 @@ import urllib
 from collections import OrderedDict
 import datetime
 from os.path import expandvars,join
+import traceback
 
 from reviewskim.utils.web import url_join, get_html_text, get_soup
 from reviewskim.utils.strings import clean_unicode
@@ -18,16 +19,38 @@ def scrape_movie(**kwargs):
 class IMDBScraper(object):
     def __init__(self, 
             imdb_movie_id,
-            poster_dir, poster_thumbnail_dir, 
+            skip_posters=False,
+            poster_dir=None, 
+            poster_thumbnail_dir=None, 
             debug=False, 
             review_limit=None):
         self.imdb_movie_id = imdb_movie_id
+
+        self.skip_posters = skip_posters
         self.poster_dir = poster_dir
         self.poster_thumbnail_dir = poster_thumbnail_dir
+        if self.skip_posters is False:
+            assert self.poster_dir is not None and self.poster_thumbnail_dir is not None
+
+
         self.debug=debug
         self.review_limit=review_limit
 
         assert self.review_limit % 10 == 0
+
+    @staticmethod
+    def format_imdb_date(date):
+        """ Most IMDB movies are of the format: "24 May 2013".
+            For example: http://www.imdb.com/title/tt1905041/
+            Some movies release dates are of the form "April 1957".
+            For example: http://www.imdb.com/title/tt0050083/
+            
+        """
+        try:
+            return datetime.datetime.strptime(date,'%d %B %Y')
+        except:
+            return datetime.datetime.strptime(date,'%B %Y')
+
 
     def scrape_title(self):
         _title=self.main_page_soup.findAll('title')
@@ -37,28 +60,30 @@ class IMDBScraper(object):
         f=re.match('(.+) \((\d+)\) - IMDb',_title)
         groups=f.groups()
         assert len(groups)==2
-        self.movie_name,self.release_year=groups
-        self.release_year=int(self.release_year)
+        self.movie_name,release_year=groups
 
     def scrape_release_date(self):
-        temp=self.main_page_soup.findAll("h4",**{"text":"Release Date:"})
-        assert len(temp)==1
-        _release_date=temp[0].next.next
-        _release_date=str(_release_date)
-        g=re.match('\s+(.+) \(\w+\)',_release_date)
-        groups=g.groups()
-        assert len(groups)==1
-        self.release_date=groups[0]
-        self.release_date=datetime.datetime.strptime(self.release_date,'%d %B %Y')
+        try:
+            temp=self.main_page_soup.findAll("h4",**{"text":"Release Date:"})
+            assert len(temp)==1
+            _release_date=temp[0].next.next
+            _release_date=str(_release_date)
+            g=re.match('\s*(.+) \(.+\)',_release_date)
+            groups=g.groups()
+            assert len(groups)==1
+            self.release_date=groups[0]
+            self.release_date=self.format_imdb_date(self.release_date)
+        except:
+            print 'Error scraping release date for movie %s' % self.movie_name
+            if self.debug: traceback.print_exc()
+            self.release_date= None 
 
     def scrape_nreviews(self):
         """ find the 'See all XXX user reviews' text on the webpage.
             Pull out of that the number of reviews.
         """
-        pattern=re.compile('See all ([\d,]+) user reviews')
-        reviews=self.main_page_soup.findAll('a', text=pattern)
-
-        # This should only show up once on a webpage, but good to be paranoid
+        pattern=re.compile('([\d,]+) user')
+        reviews=self.main_page_soup.findAll(itemprop="reviewCount",text=pattern)
         assert len(reviews)==1
         reviews_text=str(reviews[0].text)
 
@@ -71,33 +96,45 @@ class IMDBScraper(object):
         assert self.nreviews > 0
 
     def scrape_budget(self):
-        val=self.main_page_soup.findAll('h4',**{"class":"inline","text":"Budget:"})
-        assert len(val)==1
-        val=val[0]
-        val=val.next.next.strip()
-        if val[0]=='$':
+        try:
+            val=self.main_page_soup.findAll('h4',**{"class":"inline","text":"Budget:"})
+            assert len(val)==1
+            val=val[0]
+            val=val.next.next.strip()
+            assert val[0]=='$'
             val=val[1:].replace(',','')
             self.budget = float(val)
-        else:
-            # This happens when budgets are in other currencies.
-            # For example, http://www.imdb.com/title/tt0211915/
+        except:
+            print 'Error reading in budget for movie %s' % self.movie_name
+            if self.debug: traceback.print_exc()
             self.budget = None 
 
     def scrape_description(self):
-        self.description=self.main_page_soup.findAll('div', itemprop="description")
-        assert len(self.description)==1
-        self.description=self.description[0]
-        self.description=self.description.next.next.get_text()
-        self.description=re.sub('\s+',' ',self.description)
+        try:
+            self.description=self.main_page_soup.findAll('div', itemprop="description")
+            assert len(self.description)==1
+            self.description=self.description[0]
+            self.description=self.description.next.next.get_text()
+            self.description=re.sub('\s+',' ',self.description)
+        except:
+            print 'Error reading description for movie %s' % self.movie_name
+            if self.debug: traceback.print_exc()
+            self.description= None 
 
     def scrape_gross(self):
         val=self.main_page_soup.findAll('h4',**{"class":"inline","text":'Gross:'})
-        assert len(val)==1
-        val=val[0]
-        val=val.next.next.strip()
-        assert val[0]=='$'
-        val=val[1:].replace(',','')
-        self.gross = float(val)
+        assert len(val)<=1
+        if len(val)==0:
+            self.gross=None
+            print 'No gross for movie %s' % self.imdb_movie_id
+        else:
+            val=val[0]
+            val=val.next.next.strip()
+            if val[0]=='$':
+                val=val[1:].replace(',','')
+                self.gross = float(val)
+            else:
+                self.gross = None
 
     
     def scrape_main_page(self):
@@ -113,8 +150,6 @@ class IMDBScraper(object):
         self.scrape_description()
 
         self.get_posters()
-
-        assert self.release_date.year == self.release_year
 
     def scrape_movie(self):
 
@@ -158,7 +193,14 @@ class IMDBScraper(object):
         # The easiest way si to match on user avatars:
         all_reviews_html = soup.findAll('img',**{'class':"avatar"})
 
-        return [self.get_review_from_page(i,imdb_review_url) for i in all_reviews_html]
+        all_reviews = []
+        for i in all_reviews_html:
+            try:
+                all_reviews.append(self.get_review_from_page(i,imdb_review_url))
+            except:
+                print 'Error Reading in review on page %s' % imdb_review_url
+                if self.debug: traceback.print_exc()
+        return all_reviews
 
     def get_results(self):
         return dict(
@@ -177,27 +219,35 @@ class IMDBScraper(object):
     def get_posters(self):
         """ Read in the movie posters from a page.
         """
-        imdb_movie_id = self.imdb_movie_id
 
-        # read the poster
-        poster=self.main_page_soup.findAll("img",itemprop="image",  title=re.compile('Poster'))
-        assert len(poster)==1
-        self.imdb_poster_thumbnail_url=poster[0]['src']
-        self.imdb_poster_url=self.imdb_poster_thumbnail_url.split('._V')[0]+'.jpg'
+        try:
+            imdb_movie_id = self.imdb_movie_id
 
-        print ' * downloading thumbnail poster %s' % self.imdb_poster_thumbnail_url
+            # read the poster
+            poster=self.main_page_soup.findAll("img",itemprop="image",  title=re.compile('Poster'))
+            assert len(poster)==1
+            self.imdb_poster_thumbnail_url=poster[0]['src']
+            self.imdb_poster_url=self.imdb_poster_thumbnail_url.split('._V')[0]+'.jpg'
 
-        local_poster_thumbnail_filename=expandvars(join(self.poster_thumbnail_dir,'poster_thumbnail_%s.jpg' % imdb_movie_id))
+            if not self.skip_posters:
+                print ' * downloading thumbnail poster %s' % self.imdb_poster_thumbnail_url
 
-        # download the poster
-        urllib.urlretrieve(self.imdb_poster_thumbnail_url,local_poster_thumbnail_filename)
-        assert os.stat(local_poster_thumbnail_filename).st_size>0
+                local_poster_thumbnail_filename=expandvars(join(self.poster_thumbnail_dir,'poster_thumbnail_%s.jpg' % imdb_movie_id))
 
-        print ' * downloading poster %s' % self.imdb_poster_url
+                # download the poster
+                urllib.urlretrieve(self.imdb_poster_thumbnail_url,local_poster_thumbnail_filename)
+                assert os.stat(local_poster_thumbnail_filename).st_size>0
 
-        local_poster_filename=expandvars(join(self.poster_dir,'poster_%s.jpg' % imdb_movie_id))
-        urllib.urlretrieve(self.imdb_poster_url, local_poster_filename)
-        assert os.stat(local_poster_filename).st_size>0
+                print ' * downloading poster %s' % self.imdb_poster_url
+
+                local_poster_filename=expandvars(join(self.poster_dir,'poster_%s.jpg' % imdb_movie_id))
+                urllib.urlretrieve(self.imdb_poster_url, local_poster_filename)
+                assert os.stat(local_poster_filename).st_size>0
+        except:
+            print 'Error scraping poster url for movie %s' % self.movie_name
+            if self.debug: traceback.print_exc()
+            self.imdb_poster_thumbnail_url=None
+            self.imdb_poster_url=None
 
     def get_review_from_page(self,review_soup,imdb_review_url):
         """ Pull out a single review form an IMDB
@@ -358,4 +408,5 @@ def get_top_movies(year, number, debug=False):
                 return ret_list
 
     return ret_list
+
 
