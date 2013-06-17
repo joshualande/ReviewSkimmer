@@ -3,9 +3,9 @@
 
 {% if imdb_movie_id %}
 
-"{{ movie_name }}" found in database with IMDB Movie ID={{ imdb_movie_id }}!
+    "{{ movie_name }}" found in database with IMDB Movie ID={{ imdb_movie_id }}!
 
-<imb src="{{ thumbnail_url }}" />
+    <img src="{{ thumbnail_url }}" />
 
 {% else %}
     "{{ movie_name}}" not found in database!
@@ -13,6 +13,5 @@
 
 
 
-<img src="{{ thumbnail_url }}" />
 
 {% endblock %}
