@@ -1,7 +1,5 @@
-from datetime import datetime 
+from datetime import datetime
 import urllib
-import getpass
-import MySQLdb
 import pandas.io.sql as psql
 
 class IMDBDatabaseConnector(object):
@@ -14,8 +12,8 @@ class IMDBDatabaseConnector(object):
     def delete_db(self):
         """ Delete all tables from the IMDB databse. """
         db=self.db
-        db.query("DROP TABLE rs_movies")
-        db.query("DROP TABLE rs_reviews")
+        db.query("DROP TABLE IF EXISTS rs_movies")
+        db.query("DROP TABLE IF EXISTS rs_reviews")
 
     def create_schema(self):
         """ Create the schema for the IMDB reviews databse.
@@ -102,7 +100,7 @@ class IMDBDatabaseConnector(object):
 
         if self.in_movie_database(imdb_movie_id) or self.in_review_database(imdb_movie_id):
             if force:
-                self.del_movie(self,imdb_movie_id)
+                self.del_movie(imdb_movie_id)
             else:
                 raise Exception("Cannot insert movie %s because it already exists in database." % imdb_movie_id)
 
@@ -231,20 +229,13 @@ class IMDBDatabaseConnector(object):
         else:
             return None
     
-    def get__imdb_poster_thumbnail_url(self,imdb_movie_id):
-        return _get_movie_description(imdb_movie_id)['imdb_poster_thumbnail_url']
+    def get_imdb_poster_thumbnail_url(self,imdb_movie_id):
+        return self.get_movie(imdb_movie_id)['rs_imdb_poster_thumbnail_url']
 
     def get_movie_description(self,imdb_movie_id):
         if not self.in_review_database(imdb_movie_id):
             raise Exception("Movie %d is not in the database" % imdb_movie_id)
-    
-        query="""SELECT * FROM rs_movies WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
-        df_mysql = psql.frame_query(query, con=self.db)
-
-        assert len(df_mysql)==1
-        # convert DataFrame to Series
-        df_mysql=df_mysql.ix[0]
-        return df_mysql
+        return self.get_movie(imdb_movie_id)['rs_imdb_description']
 
     def get_reviews(self,imdb_movie_id):
         if not self.in_review_database(imdb_movie_id):
@@ -255,7 +246,24 @@ class IMDBDatabaseConnector(object):
 
         return df_mysql
 
+    def get_movie(self,imdb_movie_id):
+    
+        query="""SELECT * FROM rs_movies WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
+        df_mysql = psql.frame_query(query, con=self.db)
+
+        if len(df_mysql) == 0:
+            raise Exception("Movie %d is not in the database" % imdb_movie_id)
+        assert len(df_mysql) <= 1
+        return df_mysql.ix[0]
+
     def get_all_reviews(self):
         query="""SELECT * FROM rs_reviews"""
         df_mysql = psql.frame_query(query, con=self.db)
         return df_mysql
+
+    def get_all_movies(self):
+        query="""SELECT * FROM rs_movies"""
+        df_mysql = psql.frame_query(query, con=self.db)
+        return df_mysql
+
+

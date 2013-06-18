@@ -19,20 +19,9 @@ def scrape_movie(**kwargs):
 class IMDBScraper(object):
     def __init__(self, 
             imdb_movie_id,
-            skip_posters=False,
-            poster_dir=None, 
-            poster_thumbnail_dir=None, 
             debug=False, 
             review_limit=None):
         self.imdb_movie_id = imdb_movie_id
-
-        self.skip_posters = skip_posters
-        self.poster_dir = poster_dir
-        self.poster_thumbnail_dir = poster_thumbnail_dir
-        if self.skip_posters is False:
-            assert self.poster_dir is not None and self.poster_thumbnail_dir is not None
-
-
         self.debug=debug
         self.review_limit=review_limit
 
@@ -84,16 +73,20 @@ class IMDBScraper(object):
         """
         pattern=re.compile('([\d,]+) user')
         reviews=self.main_page_soup.findAll(itemprop="reviewCount",text=pattern)
-        assert len(reviews)==1
-        reviews_text=str(reviews[0].text)
+        try:
+            assert len(reviews)==1
+            reviews_text=str(reviews[0].text)
 
-        # find number of reviews in the string
-        groups=pattern.match(str(reviews_text)).groups()
-        assert len(groups)==1
-        self.nreviews=int(groups[0].replace(',',''))
+            # find number of reviews in the string
+            groups=pattern.match(str(reviews_text)).groups()
+            assert len(groups)==1
+            self.nreviews=int(groups[0].replace(',',''))
+            assert self.nreviews > 0
+        except:
+            print 'No movie reviews for movie %s' % self.movie_name
+            if self.debug: traceback.print_exc()
+            self.nreviews = 0
 
-        # there should alwasy be a review
-        assert self.nreviews > 0
 
     def scrape_budget(self):
         try:
@@ -105,7 +98,7 @@ class IMDBScraper(object):
             val=val[1:].replace(',','')
             self.budget = float(val)
         except:
-            print 'Error reading in budget for movie %s' % self.movie_name
+            print 'Error reading in budget for movie: %s' % self.movie_name
             if self.debug: traceback.print_exc()
             self.budget = None 
 
@@ -142,19 +135,15 @@ class IMDBScraper(object):
         self.main_page_url = url_join('http://www.imdb.com/title/','tt%07d' % self.imdb_movie_id)
         self.main_page_soup = get_soup(self.main_page_url)
 
-        self.scrape_nreviews()
         self.scrape_title()
+        self.scrape_nreviews()
         self.scrape_release_date()
         self.scrape_budget()
         self.scrape_gross()
         self.scrape_description()
-
         self.get_posters()
 
     def scrape_movie(self):
-
-        poster_dir = self.poster_dir
-        poster_thumbnail_dir = self.poster_thumbnail_dir
 
         imdb_movie_id = self.imdb_movie_id
 
@@ -228,21 +217,6 @@ class IMDBScraper(object):
             assert len(poster)==1
             self.imdb_poster_thumbnail_url=poster[0]['src']
             self.imdb_poster_url=self.imdb_poster_thumbnail_url.split('._V')[0]+'.jpg'
-
-            if not self.skip_posters:
-                print ' * downloading thumbnail poster %s' % self.imdb_poster_thumbnail_url
-
-                local_poster_thumbnail_filename=expandvars(join(self.poster_thumbnail_dir,'poster_thumbnail_%s.jpg' % imdb_movie_id))
-
-                # download the poster
-                urllib.urlretrieve(self.imdb_poster_thumbnail_url,local_poster_thumbnail_filename)
-                assert os.stat(local_poster_thumbnail_filename).st_size>0
-
-                print ' * downloading poster %s' % self.imdb_poster_url
-
-                local_poster_filename=expandvars(join(self.poster_dir,'poster_%s.jpg' % imdb_movie_id))
-                urllib.urlretrieve(self.imdb_poster_url, local_poster_filename)
-                assert os.stat(local_poster_filename).st_size>0
         except:
             print 'Error scraping poster url for movie %s' % self.movie_name
             if self.debug: traceback.print_exc()
@@ -355,58 +329,4 @@ class IMDBScraper(object):
 
         self.imdb_review_ranking_counter+=1
         return d
-
-
-def get_top_movies(year, number, debug=False):
-    """ Pull out the 'number' highest-grosing
-        movies of the year.
-    """
-    NUM_MOVIES_PER_PAGE=50
-
-    def get_website(start,year):
-        website='http://www.imdb.com/search/title?at=0&sort=boxoffice_gross_us&start=%s&title_type=feature&year=%s,%s' % (start,year,year)
-        return website
-
-    n=1
-
-    ret_list=OrderedDict()
-
-    while n<number:
-        print 'n=%s/%s' % (n,number)
-        url_page = get_website(start=n,year=year)
-
-        print url_page
-        n+=NUM_MOVIES_PER_PAGE
-
-        # I don't get why, but IMDB barfs when I specify a user agent???
-        soup=get_soup(url_page,no_user_agent=True)
-
-        # Match on <td class="number">, which refers to the ranking of the movie
-        all_movies=soup.findAll('td',**{'class':"number"})
-
-        for movie in all_movies:
-            title_part=movie.next.next.next.next.next.next.next.next.next.next.next.next.next
-
-            movie_name=clean_unicode(title_part.next)
-
-            link=str(title_part['href'])
-            m=re.match('/title/tt(\d+)/',link)
-            groups=m.groups()
-            assert len(groups)==1
-            imdb_movie_id=int(groups[0])
-
-            _year=title_part.next.next.next.next
-            m=re.match(r'\((\d+)\)',_year)
-            groups=m.groups()
-            assert len(groups)==1
-            year=int(groups[0])
-
-            ret_list[imdb_movie_id]=dict(movie_name=movie_name,year=year)
-
-            # if only a few movies are requested
-            if len(ret_list) == number:
-                return ret_list
-
-    return ret_list
-
 
