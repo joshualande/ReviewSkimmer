@@ -213,12 +213,28 @@ class IMDBDatabaseConnector(object):
         assert l<=1
         return l==1
 
+    def get_newest_imdb_movie_id(self,movie_name):
+        c=self.cursor
+            
+        ex=c.execute("""
+            SELECT rs_imdb_movie_id 
+            FROM rs_movies WHERE rs_movie_name=%s 
+            ORDER BY rs_release_date DESC
+            """,
+            (movie_name,)
+        )
+        l=c.fetchall()
+        if len(l)==0:
+            return None
+        else:
+            return l[0][0]
+
     def get_imdb_movie_id(self,movie_name):
         """ Test if a movie with a given imdb movie id is in the database. """
         c=self.cursor
 
         ex=c.execute("""
-            select rs_imdb_movie_id FROM rs_movies WHERE rs_movie_name=%s""",
+            SELECT rs_imdb_movie_id FROM rs_movies WHERE rs_movie_name=%s""",
             (movie_name,)
         )
         l=c.fetchall()

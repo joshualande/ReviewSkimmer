@@ -3,9 +3,32 @@
 
 {% if imdb_movie_id %}
 
-    "{{ movie_name }}" found in database with IMDB Movie ID={{ imdb_movie_id }}!
+<div class="row">
+  <div class="span4">
 
-    <img src="{{ thumbnail_url }}" />
+    {{ thumbnail_url_html|safe }}
+
+    </div>
+    <div class="span8">
+
+        {% for word in summary['top_quotes'] %}
+        "{{ word }}"
+        <br/><br/>
+        {% endfor %}
+    </ul>
+
+    </div>
+</div>
+
+
+<br/>
+Top Occuring Words:
+    <ul>
+        {% for word in summary['top_occurances'] %}
+            <li>{{ word }}</li>
+        {% endfor %}
+    </ul>
+
 
 {% else %}
     "{{ movie_name}}" not found in database!

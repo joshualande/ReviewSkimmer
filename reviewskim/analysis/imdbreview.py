@@ -28,7 +28,7 @@ def analyze_reviews(reviews):
         tokens = [token.lower() for token in tokens]
 
         # Take only relativly long characters
-        toeksn = [token for token in tokens if len(token)>=3]
+        tokens = [token for token in tokens if len(token)>=3]
 
         # remove words with numbers/digits
         tokens = [token for token in tokens if m.search(token) is None]
@@ -52,7 +52,7 @@ def analyze_reviews(reviews):
         for token in tokens:
             all_words[token]+=1
 
-    most_common=all_words.most_common(1000)
+    most_common=all_words.most_common(2000)
     most_common=zip(*most_common)[0]
 
     print 'most_common_words = ',most_common[-20:]
@@ -70,6 +70,6 @@ def analyze_reviews(reviews):
 
     print 'accuracy',nltk.classify.accuracy(classifier, train_set)
 
-    classifier.show_most_informative_features(100)
+    classifier.show_most_informative_features(300)
 
     return classifier
