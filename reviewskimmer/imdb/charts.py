@@ -1,8 +1,8 @@
 from collections import OrderedDict
 import re
 
-from reviewskim.utils.strings import clean_unicode
-from reviewskim.utils.web import get_soup
+from reviewskimmer.utils.strings import clean_unicode
+from reviewskimmer.utils.web import get_soup
 
 def _get_movie_list(url):
 

@@ -94,7 +94,7 @@ class IMDBDatabaseConnector(object):
 
     def add_movie(self,movie, force=False):
 	""" Take in a movie dictionary skimmed from
-	    reviewskim.imdb.scrape.scrape_movie and put the review
+	    reviewskimmer.imdb.scrape.scrape_movie and put the review
 	    into the database. """
         imdb_movie_id=movie['imdb_movie_id']
 
@@ -111,7 +111,7 @@ class IMDBDatabaseConnector(object):
 
     def _add_review(self,review):
 	""" Add a review dictionary to the database.  This dict
-        comes from reviewskim.imdb.scrape.scrape_movie to the
+        comes from reviewskimmer.imdb.scrape.scrape_movie to the
         database. """
 
         c=self.cursor

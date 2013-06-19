@@ -6,8 +6,8 @@ import datetime
 from os.path import expandvars,join
 import traceback
 
-from reviewskim.utils.web import url_join, get_html_text, get_soup
-from reviewskim.utils.strings import clean_unicode
+from reviewskimmer.utils.web import url_join, get_html_text, get_soup
+from reviewskimmer.utils.strings import clean_unicode
 
 def scrape_movie(**kwargs):
     """ Convenience function. """

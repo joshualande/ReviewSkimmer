@@ -5,14 +5,14 @@ from os.path import join
 from flask import Flask
 from flask import render_template
 from flask import request
-from reviewskim.analysis.summarize import summarize_reviews
+from reviewskimmer.analysis.summarize import summarize_reviews
 
 
 app = Flask(__name__)
-app.config.from_envvar('REVIEWSKIM_CONFIG')
+app.config.from_envvar('REVIEWSKIMMER_CONFIG')
 
 
-from reviewskim.database.dbconnect import IMDBDatabaseConnector
+from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
 
