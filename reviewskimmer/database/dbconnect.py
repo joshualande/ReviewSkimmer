@@ -198,6 +198,9 @@ class IMDBDatabaseConnector(object):
         )
         self.db.commit()
 
+    def get_nreviews(self,imdb_movie_id):
+        return len(self.get_reviews(imdb_movie_id))
+
     def get_reviews(self,imdb_movie_id):
         """ Read all revies for the movie with a given imdb movie id.
         """

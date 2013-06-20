@@ -14,17 +14,24 @@ def scrape_movie(**kwargs):
     s.scrape_movie()
     return s.get_results()
 
+def nreviews_on_page(imdb_movie_id, debug=False):
+    """ This is necessary for caching.
+    """
+    main_page_url=IMDBScraper.get_main_page_url(imdb_movie_id)
+    main_page_soup = get_soup(main_page_url)
+    return IMDBScraper._scrape_nreviews(main_page_soup,imdb_movie_id,debug)
+
 
 class IMDBScraper(object):
     def __init__(self, 
             imdb_movie_id,
             debug=False, 
-            review_limit=None):
+            nreview_limit=None):
         self.imdb_movie_id = imdb_movie_id
         self.debug=debug
-        self.review_limit=review_limit
+        self.nreview_limit=nreview_limit
 
-        assert self.review_limit % 10 == 0
+        assert self.nreview_limit is None or self.nreview_limit % 10 == 0
 
     @staticmethod
     def format_imdb_date(date):
@@ -67,11 +74,15 @@ class IMDBScraper(object):
             self.release_date= None 
 
     def scrape_nreviews(self):
+        self.nreviews=self._scrape_nreviews(self.main_page_soup,self.imdb_movie_id,self.debug)
+
+    @staticmethod
+    def _scrape_nreviews(main_page_soup,imdb_movie_id,debug):
         """ find the 'See all XXX user reviews' text on the webpage.
             Pull out of that the number of reviews.
         """
         pattern=re.compile('([\d,]+) user')
-        reviews=self.main_page_soup.findAll(itemprop="reviewCount",text=pattern)
+        reviews=main_page_soup.findAll(itemprop="reviewCount",text=pattern)
         try:
             assert len(reviews)==1
             reviews_text=str(reviews[0].text)
@@ -79,12 +90,13 @@ class IMDBScraper(object):
             # find number of reviews in the string
             groups=pattern.match(str(reviews_text)).groups()
             assert len(groups)==1
-            self.nreviews=int(groups[0].replace(',',''))
-            assert self.nreviews > 0
+            nreviews=int(groups[0].replace(',',''))
+            assert nreviews > 0
+            return nreviews
         except:
-            print 'No movie reviews for movie %s' % self.movie_name
-            if self.debug: traceback.print_exc()
-            self.nreviews = 0
+            print 'No movie reviews for movie %s' % imdb_movie_id
+            if debug: traceback.print_exc()
+            return 0
 
 
     def scrape_budget(self):
@@ -128,10 +140,13 @@ class IMDBScraper(object):
             else:
                 self.gross = None
 
+    @staticmethod
+    def get_main_page_url(imdb_movie_id):
+        return url_join('http://www.imdb.com/title/','tt%07d' % imdb_movie_id)
     
     def scrape_main_page(self):
 
-        self.main_page_url = url_join('http://www.imdb.com/title/','tt%07d' % self.imdb_movie_id)
+        self.main_page_url = self.get_main_page_url(self.imdb_movie_id)
         self.main_page_soup = get_soup(self.main_page_url)
 
         self.scrape_title()
@@ -166,11 +181,8 @@ class IMDBScraper(object):
 
             n+=10 # imdb pages increment in steps of 10
 
-            if n == self.review_limit:
+            if self.nreview_limit is not None and n == self.nreview_limit:
                 break
-
-        if self.review_limit==None:
-            assert len(reviews) == self.nreviews,'reviews=%s, nreviews=%s' % (len(reviews),self.nreviews)
 
 
     def get_reviews_from_page(self,imdb_review_url):

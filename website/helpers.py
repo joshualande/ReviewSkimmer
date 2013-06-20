@@ -4,7 +4,6 @@ from collections import OrderedDict
 def get_search_url(imdb_movie_id,connector):
     movie_name=connector.get_movie_name(imdb_movie_id)
     url='/search.html?q='+urllib.quote(movie_name)
-    print 'dog',url
     return url
 
 def get_poster_thumbnail(imdb_movie_id,connector):
