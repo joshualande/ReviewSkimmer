@@ -3,7 +3,7 @@ from . import scrape
 
 def ingest_movies(movies, connector, force=False, **kwargs):
     """ Simple function to ingest multiple movies,
-        assuming movies is a dict mapping imdb_movie_id -> movie_name.
+        assuming movies is a list of imdb_movie_ids.
     """
     def _scrape():
         movie=scrape.scrape_movie(
@@ -12,9 +12,9 @@ def ingest_movies(movies, connector, force=False, **kwargs):
         return movie
 
 
-    for i,(imdb_movie_id,movie_name) in enumerate(movies.items()):
+    for i,imdb_movie_id in enumerate(movies):
 
-        print imdb_movie_id,movie_name,'%s/%s' % (i,len(movies))
+        print imdb_movie_id,'%s/%s' % (i,len(movies))
 
         if force:
             print ' -> loading :)'

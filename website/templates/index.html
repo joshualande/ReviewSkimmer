@@ -1,11 +1,35 @@
 {% extends "layout.html" %}
 {% block body %}
 
+<center>
+
+  <h1>Let me tell you about a movie!</h1><br></br>
+
 <form class="form-search" action="search.html" method="GET">
-    <input type="text" class="input-medium search-query"
-    name="q"
-    placeholder="What movie?" >
-    <button type="submit" class="btn">Search</button>
+  <input type="text" class="input-medium search-query" name="q" placeholder="What movie?" >
+  <button type="submit" class="btn">Search</button>
 </form>
+
+<br/><br/>
+
+  <h1>Or, pick top grossing movies:</h1><br></br>
+
+{% for year in top_grossing %}
+
+<div class="row">
+{% for movie in top_grossing[year] %}
+ <div class="span3">
+{{ movie|safe }}
+</div>
+{% endfor %}
+
+</div>
+<br/><br/>
+
+{% endfor %}
+
+</center>
+
+<br>
 
 {% endblock %}

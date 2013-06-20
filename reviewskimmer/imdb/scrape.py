@@ -1,6 +1,5 @@
 import re
 import os
-import urllib
 from collections import OrderedDict
 import datetime
 from os.path import expandvars,join

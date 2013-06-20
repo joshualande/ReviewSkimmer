@@ -11,7 +11,10 @@
     </div>
     <div class="span8">
 
-        {% for word in summary['top_quotes'] %}
+
+      <h1>{{ movie_name }}</h1><br/>
+
+        {% for word in top_quotes %}
         "{{ word }}"
         <br/><br/>
         {% endfor %}
@@ -24,7 +27,7 @@
 <br/>
 Top Occuring Words:
     <ul>
-        {% for word in summary['top_occurances'] %}
+        {% for word in top_occurances %}
             <li>{{ word }}</li>
         {% endfor %}
     </ul>

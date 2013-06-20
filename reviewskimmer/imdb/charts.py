@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import re
+from pandas import DataFrame
 
 from reviewskimmer.utils.strings import clean_unicode
 from reviewskimmer.utils.web import get_soup
@@ -16,19 +17,27 @@ def _get_movie_list(url):
         movies.append(current_movie)
 
     ret=OrderedDict()
-    for movie in movies:
+
+    imdb_movie_id=[]
+    ranking=[]
+
+    for i,movie in enumerate(movies):
         m=re.match('/title/tt(\d+)/',movie['href'])
-        imdb_movie_id=int(m.groups()[0])
-        movie_title=clean_unicode(movie.next)
-        ret[imdb_movie_id]=movie_title
+        imdb_movie_id.append(int(m.groups()[0]))
+        ranking.append(i)
 
-    return ret
+    return DataFrame({'imdb_movie_id':imdb_movie_id,'ranking':ranking})
 
-def get_top_100():
-    return _get_movie_list(url='http://www.imdb.com/chart/top')
+def get_top_100_all_time():
+    df=_get_movie_list(url='http://www.imdb.com/chart/top')
+    df.columns = ['rs_imdb_movie_id', 'rs_top_100_ranking']
+    return df
 
-def get_bottom_100():
-    return _get_movie_list(url='http://www.imdb.com/chart/bottom')
+
+def get_bottom_100_all_time():
+    df=_get_movie_list(url='http://www.imdb.com/chart/bottom')
+    df.columns = ['rs_imdb_movie_id', 'rs_bottom_100_ranking']
+    return df
 
 def get_top_box_office_by_year(year, number, debug=False):
     """ Pull out the 'number' highest-grosing
@@ -84,4 +93,19 @@ def get_top_box_office_by_year(year, number, debug=False):
 
     return ret_list
 
+
+def get_top_grossing_dataframe(years, number):
+
+    rs_imdb_movie_id=[]
+    rs_ranking=[]
+    rs_year=[]
+
+    for year in years:
+        d=get_top_box_office_by_year(year, number, debug=False)
+        for i,k in enumerate(d.keys()):
+            rs_ranking.append(i)
+            rs_imdb_movie_id.append(k)
+            rs_year.append(year)
+
+    return DataFrame({'rs_imdb_movie_id':rs_imdb_movie_id,'rs_ranking':rs_ranking,'rs_year':rs_year})
 

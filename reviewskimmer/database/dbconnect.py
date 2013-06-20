@@ -15,6 +15,29 @@ class IMDBDatabaseConnector(object):
         db.query("DROP TABLE IF EXISTS rs_movies")
         db.query("DROP TABLE IF EXISTS rs_reviews")
 
+    def create_bottom_100_all_time(self,bottom_100_all_time):
+        """ bottom_100_all_time should be a pandas DataFrame that comes from
+            the funtion reviewskimmer.imdb.charts.get_bottom_100_all_time. """
+        db=self.db
+        psql.write_frame(bottom_100_all_time, con=db, name='rs_bottom_100_all_time', if_exists='delete', flavor='mysql')
+
+    def get_bottom_100_all_time(self):
+        return psql.frame_query("""SELECT * FROM rs_bottom_100_all_time""", con=self.db)
+
+    def create_top_100_all_time(self,top_100_all_time):
+        db=self.db
+        psql.write_frame(top_100_all_time, con=db, name='rs_top_100_all_time', if_exists='delete', flavor='mysql')
+
+    def get_top_100_all_time(self):
+        return psql.frame_query("""SELECT * FROM rs_top_100_all_time""", con=self.db)
+
+    def create_top_grossing(self,top_grossing):
+        db=self.db
+        psql.write_frame(top_grossing, con=db, name='rs_top_grossing', if_exists='delete', flavor='mysql')
+
+    def get_top_grossing(self):
+        return psql.frame_query("""SELECT * FROM rs_top_grossing""", con=self.db)
+
     def create_schema(self):
         """ Create the schema for the IMDB reviews databse.
         """
@@ -271,6 +294,9 @@ class IMDBDatabaseConnector(object):
             raise Exception("Movie %d is not in the database" % imdb_movie_id)
         assert len(df_mysql) <= 1
         return df_mysql.ix[0]
+
+    def get_movie_name(self,imdb_movie_id):
+        return self.get_movie(imdb_movie_id)['rs_movie_name']
 
     def get_all_reviews(self):
         query="""SELECT * FROM rs_reviews"""
