@@ -12,7 +12,6 @@ def get_poster_thumbnail(imdb_movie_id,connector):
     return '<a href="%s"><img src="%s"></a>' % (url,path)
 
 def get_top_grossing_dict(connector, years, movies_per_year):
-
     top_grossing=connector.get_top_grossing()
     movies=OrderedDict()
     for year in years:

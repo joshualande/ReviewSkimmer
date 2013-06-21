@@ -9,14 +9,13 @@ from reviewskimmer.utils.web import url_join, get_html_text, get_soup
 from reviewskimmer.utils.strings import clean_unicode
 
 def scrape_movie(**kwargs):
-    """ Convenience function. """
+    """ Convenience function  which scrapes one movie. """
     s=IMDBScraper(**kwargs)
     s.scrape_movie()
     return s.get_results()
 
 def nreviews_on_page(imdb_movie_id, debug=False):
-    """ This is necessary for caching.
-    """
+    """ This static function is necessary for caching. """
     main_page_url=IMDBScraper.get_main_page_url(imdb_movie_id)
     main_page_soup = get_soup(main_page_url)
     return IMDBScraper._scrape_nreviews(main_page_soup,imdb_movie_id,debug)

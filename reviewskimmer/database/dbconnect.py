@@ -9,6 +9,12 @@ class IMDBDatabaseConnector(object):
         self.db=db
         self.cursor=self.db.cursor()
 
+    def get_most_informative_features(self):
+        return psql.frame_query("""SELECT * FROM rs_most_informative_features""", con=self.db)
+    def set_most_informative_features(self, features):
+        psql.write_frame(features, con=self.db, name='rs_most_informative_features', if_exists='replace', flavor='mysql')
+
+
     def delete_db(self):
         """ Delete all tables from the IMDB databse. """
         db=self.db
@@ -18,22 +24,19 @@ class IMDBDatabaseConnector(object):
     def create_bottom_100_all_time(self,bottom_100_all_time):
         """ bottom_100_all_time should be a pandas DataFrame that comes from
             the funtion reviewskimmer.imdb.charts.get_bottom_100_all_time. """
-        db=self.db
-        psql.write_frame(bottom_100_all_time, con=db, name='rs_bottom_100_all_time', if_exists='delete', flavor='mysql')
+        psql.write_frame(bottom_100_all_time, con=self.db, name='rs_bottom_100_all_time', if_exists='replace', flavor='mysql')
 
     def get_bottom_100_all_time(self):
         return psql.frame_query("""SELECT * FROM rs_bottom_100_all_time""", con=self.db)
 
     def create_top_100_all_time(self,top_100_all_time):
-        db=self.db
-        psql.write_frame(top_100_all_time, con=db, name='rs_top_100_all_time', if_exists='delete', flavor='mysql')
+        psql.write_frame(top_100_all_time, con=self.db, name='rs_top_100_all_time', if_exists='replace', flavor='mysql')
 
     def get_top_100_all_time(self):
         return psql.frame_query("""SELECT * FROM rs_top_100_all_time""", con=self.db)
 
     def create_top_grossing(self,top_grossing):
-        db=self.db
-        psql.write_frame(top_grossing, con=db, name='rs_top_grossing', if_exists='delete', flavor='mysql')
+        psql.write_frame(top_grossing, con=self.db, name='rs_top_grossing', if_exists='replace', flavor='mysql')
 
     def get_top_grossing(self):
         return psql.frame_query("""SELECT * FROM rs_top_grossing""", con=self.db)

@@ -14,8 +14,8 @@
 
       <h1>{{ movie_name }}</h1><br/>
 
-        {% for word in top_quotes %}
-        "{{ word }}"
+        {% for quote in top_quotes %}
+        "{{ quote|safe }}"
         <br/><br/>
         {% endfor %}
     </ul>
@@ -28,7 +28,7 @@
 Top Occuring Words:
     <ul>
         {% for word in top_occurances %}
-            <li>{{ word }}</li>
+        <li>{{ word }} - {{ top_occurances[word] }} </li>
         {% endfor %}
     </ul>
 

@@ -5,7 +5,7 @@ from flask import Flask
 from flask import render_template
 from flask import request
 
-from reviewskimmer.analysis.summarize import summarize_reviews
+from reviewskimmer.analysis.summarize import ReviewSummarizer
 
 from helpers import get_poster_thumbnail,get_top_grossing_dict
 
@@ -18,18 +18,13 @@ from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
 
-most_informative_words = app.config['MOST_INFORMATIVE_WORDS']
-
 app.debug=True
-
 
 @app.route('/')
 def index():
-
     top_grossing = get_top_grossing_dict(connector,
             years=range(2013,1999,-1),
             movies_per_year=4)
-
     return render_template('index.html', top_grossing=top_grossing)
 
 @app.route('/search.html')
@@ -41,15 +36,12 @@ def search():
     if imdb_movie_id is not None:
         thumbnail_url_html=get_poster_thumbnail(imdb_movie_id,connector)
 
-        summary=summarize_reviews(connector=connector,
-                imdb_movie_id=imdb_movie_id,
-                most_informative_words=most_informative_words)
-        top_quotes = summary['top_quotes']
-        top_occurances = summary['top_occurances']
+        summarizer=ReviewSummarizer(connector=connector,
+            imdb_movie_id=imdb_movie_id, num_occurances=5)
 
         return render_template('search.html', 
-                top_quotes=top_quotes,
-                top_occurances = top_occurances,
+                top_quotes=summarizer.get_top_quotes(),
+                top_occurances=summarizer.get_top_occurances(),
                 movie_name=movie_name,
                 imdb_movie_id=imdb_movie_id,
                 thumbnail_url_html=thumbnail_url_html)

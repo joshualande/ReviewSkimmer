@@ -60,8 +60,8 @@ def analyze_reviews(reviews):
     def document_features(tokens):
         return {word:word in tokens for word in most_common}
 
-    good_set=[(document_features(tokens), True) for tokens in good_tokens_list]
-    bad_set=[(document_features(tokens), False) for tokens in bad_tokens_list]
+    good_set=[(document_features(tokens), 'pos') for tokens in good_tokens_list]
+    bad_set=[(document_features(tokens), 'neg') for tokens in bad_tokens_list]
 
     train_set = good_set + bad_set
     random.shuffle(train_set) # dunno if this is necessary

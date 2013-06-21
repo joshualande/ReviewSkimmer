@@ -11,8 +11,6 @@ def loaddict(filename):
     else:
         raise Exception("Unrecognized extension %s" % extension)
 
-
-
 def savedict(results, filename, yaml_kwargs=dict()):
     is_results = lambda x: isinstance(x,dict) or isinstance(x,list)
 
