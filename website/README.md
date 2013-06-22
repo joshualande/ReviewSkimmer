@@ -1,6 +1,6 @@
-This is the website backend for ReviewSkimmer.com running on Flask.
+This is the website backend for ReviewSkimmer.com which is a python script using Flask.
 
-To run the website, use the command:
+To run the website, you can use the command:
 
 ```
   python reviewskimmer.py
