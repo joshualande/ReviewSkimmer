@@ -4,18 +4,22 @@
 {% if imdb_movie_id %}
 
 <div class="row">
-  <div class="span4">
+  <div class="span3">
 
     {{ thumbnail_url_html|safe }}
 
     </div>
-    <div class="span8">
+    <div class="span9">
 
 
       <h1>{{ movie_name }}</h1><br/>
 
         {% for quote in top_quotes %}
-        "{{ quote|safe }}"
+
+        <span style="font-size:24px">
+          "{{ quote|safe }}"
+        </span>
+
         <br/><br/>
         {% endfor %}
     </ul>
@@ -39,5 +43,6 @@ Top Occuring Words:
 
 
 
+<span style="font-size:30px">test</span>
 
 {% endblock %}
