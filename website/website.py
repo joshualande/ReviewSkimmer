@@ -5,7 +5,7 @@ from flask import Flask
 from flask import render_template
 from flask import request
 
-from reviewskimmer.analysis.summarize import ReviewSummarizer
+from reviewskimmer.analysis.summarize import ReviewSummarizer,CachedReviewSummarizer
 
 from helpers import get_poster_thumbnail,get_top_grossing_dict
 
@@ -36,14 +36,14 @@ def search():
     if imdb_movie_id is not None:
         thumbnail_url_html=get_poster_thumbnail(imdb_movie_id,connector)
 
-        summarizer=ReviewSummarizer(connector=connector,
+        summarizer=CachedReviewSummarizer(connector=connector,
             imdb_movie_id=imdb_movie_id, num_occurances=5)
 
         return render_template('search.html', 
                 top_quotes=summarizer.get_top_quotes(),
-                top_occurances=summarizer.get_top_occurances(),
+                top_word_occurances=summarizer.get_top_word_occurances(),
                 movie_name=movie_name,
-                number_reviews=len(summarizer.all_reviews),
+                number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
                 thumbnail_url_html=thumbnail_url_html)
 
