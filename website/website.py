@@ -23,7 +23,7 @@ app.debug=True
 @app.route('/')
 def index():
     top_grossing = get_top_grossing_dict(connector,
-            years=range(2013,1999,-1),
+            years=range(2013,2005,-1),
             movies_per_year=4)
     return render_template('index.html', top_grossing=top_grossing)
 
@@ -57,9 +57,9 @@ def search():
 def charts():
 
     top=connector.get_top_100_all_time()['rs_imdb_movie_id']
-    top=top.tolist()[:30]
+    top=top.tolist()[:10]
     bottom=connector.get_bottom_100_all_time()['rs_imdb_movie_id']
-    bottom=bottom.tolist()[:30]
+    bottom=bottom.tolist()[:10]
 
     top=[get_poster_thumbnail(i,connector) for i in top]
     bottom=[get_poster_thumbnail(i,connector) for i in bottom]
