@@ -28,21 +28,22 @@
 </div>
 
 
-<br/>
-Top Occuring Words:
-    <ul>
-        {% for word in top_occurances %}
-        <li>{{ word }} - {{ top_occurances[word] }} </li>
-        {% endfor %}
-    </ul>
+              <br/>
+              DEBUGGING:
+              <br/>
+
+              {{ number_reviews }} reviews
+              <br/>
+              Top Occuring Words:
+                  <ul>
+                      {% for word in top_occurances %}
+                      <li>{{ word }} - {{ top_occurances[word] }} </li>
+                      {% endfor %}
+                  </ul>
 
 
 {% else %}
     "{{ movie_name}}" not found in database!
 {% endif %}
-
-
-
-<span style="font-size:30px">test</span>
 
 {% endblock %}

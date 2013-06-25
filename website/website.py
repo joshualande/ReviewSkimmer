@@ -43,6 +43,7 @@ def search():
                 top_quotes=summarizer.get_top_quotes(),
                 top_occurances=summarizer.get_top_occurances(),
                 movie_name=movie_name,
+                number_reviews=len(summarizer.all_reviews),
                 imdb_movie_id=imdb_movie_id,
                 thumbnail_url_html=thumbnail_url_html)
 
