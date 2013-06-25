@@ -105,8 +105,6 @@ class ReviewSummarizer(object):
             top_quotes.append(first_quote)
         return top_quotes
 
-
-
     def get_top_occurances(self):
         return self.top_occurances
     def get_top_quotes(self):
