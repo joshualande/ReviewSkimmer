@@ -1,4 +1,5 @@
 from datetime import datetime
+import pickle
 import urllib
 import pandas.io.sql as psql
 
@@ -314,4 +315,53 @@ class IMDBDatabaseConnector(object):
         df_mysql = psql.frame_query(query, con=self.db)
         return df_mysql
 
+
+    def create_quote_cache(self):
+        """ Code to cache quotes """
+        db=self.db
+        db.query("""
+            CREATE TABLE rs_quote_cache (
+            rs_imdb_movie_id INT NOT NULL PRIMARY KEY,
+            rs_data LONGBLOB NOT NULL
+            );
+        """);
+
+    def delete_quote_cache(self):
+        """ Delete all tables from the IMDB databse. """
+        db=self.db
+        db.query("DROP TABLE IF EXISTS rs_quote_cache")
+
+    def are_quotes_cached(self,imdb_movie_id):
+        c=self.cursor
+
+        ex=c.execute("""
+            select * FROM rs_quote_cache WHERE rs_imdb_movie_id=%s""",
+            (imdb_movie_id,)
+        )
+        l=len(c.fetchall())
+        return l>0
+
+    def set_cached_quotes(self, imdb_movie_id, _data):
+        c=self.cursor
+        c.execute("""
+            INSERT INTO rs_quote_cache
+            VALUES (%s,%s)""", 
+            (imdb_movie_id, pickle.dumps(_data))
+        )
+
+        # This is necessary: http://mysql-python.sourceforge.net/MySQLdb.html
+        self.db.commit()
+
+    def get_cached_quotes(self, imdb_movie_id):
+        if not self.are_quotes_cached(imdb_movie_id):
+            raise Exception("No cached quotes for movie %s" % imdb_movie_id)
+        c=self.cursor
+        ex=c.execute("""
+            select * FROM rs_quote_cache WHERE rs_imdb_movie_id=%s""",
+            (imdb_movie_id,)
+        )
+        l=c.fetchall()
+        assert len(l)==1
+        imdb_movie_id,_data=l[0]
+        return pickle.loads(_data)
 

@@ -6,7 +6,7 @@ from flask import Flask
 from flask import render_template
 from flask import request
 
-from reviewskimmer.analysis.summarize import ReviewSummarizer
+from reviewskimmer.analysis.summarize import ReviewSummarizer,CachedReviewSummarizer
 
 from helpers import get_poster_thumbnail,get_top_grossing_dict
 
@@ -30,7 +30,7 @@ app.debug=True
 @app.route('/')
 def index():
     top_grossing = get_top_grossing_dict(connector,
-            years=range(2013,1999,-1),
+            years=range(2013,2005,-1),
             movies_per_year=4)
     return render_template('index.html', top_grossing=top_grossing)
 
@@ -43,15 +43,15 @@ def search():
     if imdb_movie_id is not None:
         thumbnail_url_html=get_poster_thumbnail(imdb_movie_id,connector)
 
-        summarizer=ReviewSummarizer(connector=connector,
+        summarizer=CachedReviewSummarizer(connector=connector,
             imdb_movie_id=imdb_movie_id, num_occurances=5)
 
         return render_template('search.html', 
                 top_quotes=summarizer.get_top_quotes(),
-                top_occurances=summarizer.get_top_occurances(),
+                top_word_occurances=summarizer.get_top_word_occurances(),
                 debug=args.debug,
                 movie_name=movie_name,
-                number_reviews=len(summarizer.all_reviews),
+                number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
                 thumbnail_url_html=thumbnail_url_html)
 
@@ -65,9 +65,9 @@ def search():
 def charts():
 
     top=connector.get_top_100_all_time()['rs_imdb_movie_id']
-    top=top.tolist()[:30]
+    top=top.tolist()[:10]
     bottom=connector.get_bottom_100_all_time()['rs_imdb_movie_id']
-    bottom=bottom.tolist()[:30]
+    bottom=bottom.tolist()[:10]
 
     top=[get_poster_thumbnail(i,connector) for i in top]
     bottom=[get_poster_thumbnail(i,connector) for i in bottom]
