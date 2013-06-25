@@ -17,10 +17,13 @@ class ReviewSummarizer(object):
         self._summarize()
 
     def _summarize(self):
-        self.all_reviews=self._get_reviews()
+        all_reviews=self._get_reviews()
+        top_word_occurances=self._find_top_occuranges(all_reviews)
+        top_quotes=self._find_top_quotes(top_word_occurances,all_reviews)
 
-        self.top_occurances=self._find_top_occuranges(self.all_reviews)
-        self.top_quotes=self._find_top_quotes(self.top_occurances,self.all_reviews)
+        self._data = dict(nreviews=len(all_reviews),
+                top_word_occurances=top_word_occurances,
+                top_quotes=top_quotes)
 
     def _get_reviews(self):
 
@@ -32,9 +35,9 @@ class ReviewSummarizer(object):
         all_reviews=[]
         for i,review in reviews_df.iterrows():
             score=review['rs_review_movie_score']
-            if score>=7 or score <=4:
-                if score>=7: classification='pos'
-                if score <=4: classification='neg'
+            if score>=6 or score <=5:
+                if score>=6: classification='pos'
+                if score <=5: classification='neg'
                 r=dict(text=dict(
                     raw=review['rs_review_text'],
                     raw_tokenized=nltk.word_tokenize(review['rs_review_text'])
@@ -78,13 +81,13 @@ class ReviewSummarizer(object):
                 key=lambda x: x[1]['weighted_num'], 
                 reverse=True)
 
-        top_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
-        return top_occurances
+        top_word_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
+        return top_word_occurances
 
-    def _find_top_quotes(self,top_occurances,all_reviews):
+    def _find_top_quotes(self,top_word_occurances,all_reviews):
         top_quotes=[]
         raw_top_quotes=[]
-        for word,v in top_occurances.items():
+        for word,v in top_word_occurances.items():
             # find top review where word occurs
 
             classification = v['classification']
@@ -105,7 +108,24 @@ class ReviewSummarizer(object):
             top_quotes.append(first_quote)
         return top_quotes
 
-    def get_top_occurances(self):
-        return self.top_occurances
+    def get_top_word_occurances(self):
+        return self._data['top_word_occurances']
     def get_top_quotes(self):
-        return self.top_quotes
+        return self._data['top_quotes']
+    def get_nreviews(self):
+        return self._data['nreviews']
+
+
+class CachedReviewSummarizer(ReviewSummarizer):
+    """ Cache the reviews for fast lookup. """
+    def __init__(self, connector, imdb_movie_id, num_occurances=5):
+        self.connector=connector
+        self.imdb_movie_id=imdb_movie_id
+        self.num_occurances=num_occurances
+
+        if connector.are_quotes_cached(imdb_movie_id):
+            self._data  = connector.get_cached_quotes(imdb_movie_id)
+        else:
+            self._summarize()
+            connector.set_cached_quotes(imdb_movie_id, self._data)
+
