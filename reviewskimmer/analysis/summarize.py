@@ -1,7 +1,9 @@
 from collections import OrderedDict
+import math
 from operator import itemgetter
 import nltk.data
 import nltk
+import itertools
 
 
 class ReviewSummarizer(object):
@@ -15,36 +17,97 @@ class ReviewSummarizer(object):
         self._summarize()
 
     def _summarize(self):
-        reviews_df=self.connector.get_reviews(self.imdb_movie_id)
-        all_reviews=reviews_df['rs_review_text'].tolist()
-        all_tokenized_reviews = [nltk.word_tokenize(i) for i in all_reviews]
+        self.all_reviews=self._get_reviews()
 
-        temp = self.connector.get_most_informative_features()
-        most_informative_words = temp['rs_feature_name'].tolist()
+        self.top_occurances=self._find_top_occuranges(self.all_reviews)
+        self.top_quotes=self._find_top_quotes(self.top_occurances,self.all_reviews)
 
-        # Find highest-occurance words in reviews
-        occurances = dict()
-        for word in most_informative_words:
-            occurances[word]=sum(word in i for i in all_tokenized_reviews)
-
-        sorted_occurances=sorted(occurances.items(), key=itemgetter(1), reverse=True)
-        self._top_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
+    def _get_reviews(self):
 
         # Now, find representative quotes
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
-        self._top_quotes=[]
-        for word in self._top_occurances:
-            # find top review where word occurs
-            first_occurance = next(i for i in all_reviews if word in i)
-            
-            sentences = tokenizer.tokenize(first_occurance)
-            first_quote = next(i for i in sentences if word in i)
+        reviews_df=self.connector.get_reviews(self.imdb_movie_id)
 
+        all_reviews=[]
+        for i,review in reviews_df.iterrows():
+            score=review['rs_review_movie_score']
+            if score>=7 or score <=4:
+                if score>=7: classification='pos'
+                if score <=4: classification='neg'
+                r=dict(text=dict(
+                    raw=review['rs_review_text'],
+                    raw_tokenized=nltk.word_tokenize(review['rs_review_text'])
+                    )
+                    )
+                r['classification']=classification
+                
+                sentences =  tokenizer.tokenize(r['text']['raw'])
+
+                good_sentences = [i for i in sentences if len(i.split())<20]
+
+                r['good_sentences'] = []
+                for s in good_sentences:
+                    r['good_sentences'].append(
+                            dict(raw=s, tokenized=nltk.word_tokenize(s)))
+
+                # combine only tokens from good 'short' sentences
+                r['text']['good_tokens'] = list(itertools.chain(*[i['tokenized'] for i in r['good_sentences']]))
+
+                all_reviews.append(r)                   
+        return all_reviews
+
+    def _find_top_occuranges(self,all_reviews):
+        most_informative_words = self.connector.get_most_informative_features()
+
+        occurances = dict()
+
+        for i,j in most_informative_words.iterrows():
+            word = j['rs_feature_name']
+            classification = j['rs_classification']
+            odds_ratio = j['rs_odds_ratio']
+
+            num_found=sum(word in i['text']['good_tokens'] for i in all_reviews if i['classification'] == classification)
+            occurances[word]=dict(
+                num_found=num_found,
+                odds_ratio=float(odds_ratio),
+                weighted_num=num_found*math.log(float(odds_ratio)),
+                classification=classification)
+
+        sorted_occurances=sorted(occurances.items(), 
+                key=lambda x: x[1]['weighted_num'], 
+                reverse=True)
+
+        top_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
+        return top_occurances
+
+    def _find_top_quotes(self,top_occurances,all_reviews):
+        top_quotes=[]
+        raw_top_quotes=[]
+        for word,v in top_occurances.items():
+            # find top review where word occurs
+
+            classification = v['classification']
+
+            def find(word,classification,all_reviews):
+                for r in all_reviews:
+                    for s in r['good_sentences']:
+                        if word in s['tokenized'] and classification==r['classification'] \
+                            and s['raw'] not in raw_top_quotes:
+                            return s['raw']
+                return None
+        
+            first_quote=find(word,classification,all_reviews)
+            if first_quote is None: continue
+
+            raw_top_quotes.append(first_quote)
             first_quote=first_quote.replace(word,'<b>%s</b>' % word)
-            self._top_quotes.append(first_quote)
+            top_quotes.append(first_quote)
+        return top_quotes
+
+
 
     def get_top_occurances(self):
-        return self._top_occurances
+        return self.top_occurances
     def get_top_quotes(self):
-        return self._top_quotes
+        return self.top_quotes
