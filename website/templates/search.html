@@ -28,18 +28,20 @@
 </div>
 
 
-              <br/>
-              DEBUGGING:
-              <br/>
+{% if debug %}
+  <br/>
+  DEBUGGING:
+  <br/>
 
-              {{ number_reviews }} reviews
-              <br/>
-              Top Occuring Words:
-                  <ul>
-                      {% for word in top_word_occurances %}
-                      <li>{{ word }} - {{ top_word_occurances[word] }} </li>
-                      {% endfor %}
-                  </ul>
+  {{ number_reviews }} reviews
+  <br/>
+  Top Occuring Words:
+    <ul>
+      {% for word in top_word_occurances %}
+      <li>{{ word }} - {{ top_word_occurances[word] }} </li>
+      {% endfor %}
+    </ul>
+{% endif %}
 
 
 {% else %}
