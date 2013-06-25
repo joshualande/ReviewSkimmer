@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import argparse
 
 from flask import Flask
 from flask import render_template
@@ -17,6 +18,12 @@ app.config.from_envvar('REVIEWSKIMMER_CONFIG')
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
+
+parser = argparse.ArgumentParser(description='Process some integers.')
+parser.add_argument('local',default=False, action='store_true')
+parser.add_argument('debug',default=False, action='store_true')
+args = parser.parse_args()
+
 
 app.debug=True
 
@@ -42,6 +49,7 @@ def search():
         return render_template('search.html', 
                 top_quotes=summarizer.get_top_quotes(),
                 top_occurances=summarizer.get_top_occurances(),
+                debug=args.debug,
                 movie_name=movie_name,
                 number_reviews=len(summarizer.all_reviews),
                 imdb_movie_id=imdb_movie_id,
@@ -82,8 +90,12 @@ def contact():
 
 
 if __name__ == '__main__':
-    # works locally
-    app.run() 
 
-    # works remotely
-    #app.run(host='0.0.0.0',port=80)
+    import argparse
+
+
+    if args.local:
+        app.run() 
+    else:
+        # works remotely
+        app.run(host='0.0.0.0',port=80)
