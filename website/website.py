@@ -20,7 +20,7 @@ db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('local',default=False, action='store_true')
+parser.add_argument('amazon',default=False, action='store_true')
 parser.add_argument('debug',default=False, action='store_true')
 args = parser.parse_args()
 
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     import argparse
 
 
-    if args.local:
+    if not args.amazon:
         app.run() 
     else:
         # works remotely
