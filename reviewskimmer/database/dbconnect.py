@@ -315,8 +315,18 @@ class IMDBDatabaseConnector(object):
         df_mysql = psql.frame_query(query, con=self.db)
         return df_mysql
 
+    def does_quotes_cache_exist(self):
+        c=self.cursor
+        c.execute("""
+            SELECT count(*)
+            FROM information_schema.TABLES
+            WHERE (TABLE_SCHEMA = 'reviewskimmer') 
+            AND (TABLE_NAME = 'rs_quote_cache')""")
+        l=c.fetchall()
+        return l[0][0]==1
 
-    def create_quote_cache(self):
+
+    def create_quotes_cache(self):
         """ Code to cache quotes """
         db=self.db
         db.query("""
@@ -324,7 +334,7 @@ class IMDBDatabaseConnector(object):
             rs_imdb_movie_id INT NOT NULL PRIMARY KEY,
             rs_data LONGBLOB NOT NULL
             );
-        """);
+        """)
 
     def delete_quote_cache(self):
         """ Delete all tables from the IMDB databse. """
