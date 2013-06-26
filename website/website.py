@@ -20,9 +20,10 @@ db = app.config['DB']
 connector=IMDBDatabaseConnector(db)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('amazon',default=False, action='store_true')
-parser.add_argument('debug',default=False, action='store_true')
+parser.add_argument('--amazon',default=False, action='store_true')
+parser.add_argument('--debug',default=False, action='store_true')
 args = parser.parse_args()
+
 
 
 app.debug=True
@@ -72,8 +73,6 @@ def charts():
     top=[get_poster_thumbnail(i,connector) for i in top]
     bottom=[get_poster_thumbnail(i,connector) for i in bottom]
 
-    print 'top',top
-    print 'bottom',bottom
 
     return render_template('charts.html',
             top=top,
@@ -94,8 +93,7 @@ if __name__ == '__main__':
     import argparse
 
 
-    if not args.amazon:
-        app.run() 
-    else:
-        # works remotely
+    if args.amazon:
         app.run(host='0.0.0.0',port=80)
+    else:
+        app.run() 
