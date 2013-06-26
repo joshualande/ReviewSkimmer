@@ -123,6 +123,9 @@ class CachedReviewSummarizer(ReviewSummarizer):
         self.imdb_movie_id=imdb_movie_id
         self.num_occurances=num_occurances
 
+        if not connector.does_quotes_cache_exist():
+            connector.create_quotes_cache()
+
         if connector.are_quotes_cached(imdb_movie_id):
             self._data  = connector.get_cached_quotes(imdb_movie_id)
         else:
