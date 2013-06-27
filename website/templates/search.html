@@ -16,9 +16,7 @@
 
         {% for quote in top_quotes %}
 
-        <span style="font-size:24px">
-          "{{ quote|safe }}"
-        </span>
+        <span style="font-size:24px">"{{ quote['text'] |safe }}"</span> &#8212;<a href="{{ quote['reviewer_url'] }}">{{ quote['reviewer'] }}</a>
 
         <br/><br/>
         {% endfor %}

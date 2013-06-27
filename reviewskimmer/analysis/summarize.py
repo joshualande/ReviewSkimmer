@@ -43,8 +43,9 @@ class ReviewSummarizer(object):
                 text=review['rs_review_text']
                 r=dict(text=dict(
                     raw=text,
-                    raw_tokenized=nltk.word_tokenize(text)
-                    )
+                    raw_tokenized=nltk.word_tokenize(text)),
+                    reviewer=review['rs_reviwer'],
+                    reviewer_url="http://www.imdb.com/user/ur%08d" % review['rs_imdb_reviewer_id'],
                     )
                 r['classification']=classification
                 
@@ -100,15 +101,18 @@ class ReviewSummarizer(object):
                     for s in r['good_sentences']:
                         if word in s['tokenized'] and classification==r['classification'] \
                             and s['raw'] not in raw_top_quotes:
-                            return s['raw']
+                            print r
+                            return s['raw'],r['reviewer'],r['reviewer_url']
                 return None
         
-            first_quote=find(word,classification,all_reviews)
+            first_quote,reviewer,reviewer_url=find(word,classification,all_reviews)
             if first_quote is None: continue
 
             raw_top_quotes.append(first_quote)
             first_quote=first_quote.replace(word,'<b>%s</b>' % word)
-            top_quotes.append(first_quote)
+            top_quotes.append(
+                    dict(text=first_quote,reviewer=reviewer,reviewer_url=reviewer_url)
+            )
         return top_quotes
 
     def get_top_word_occurances(self):
