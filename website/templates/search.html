@@ -3,7 +3,9 @@
 
 {% if imdb_movie_id %}
 
-<div class="row">
+<div class="well">
+
+<div class="row-fluid">
   <div class="span3">
 
     {{ thumbnail_url_html|safe }}
@@ -25,6 +27,7 @@
     </div>
 </div>
 
+<div>
 
 {% if debug %}
   <br/>

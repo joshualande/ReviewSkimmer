@@ -101,12 +101,12 @@ def secret():
     
     if user_request == 'cachepopular':
 
-        message='The popular movies were cached!'
+        message='<div class="alert alert-success">The popular movies were cached!</div>'
     elif user_request == 'clearcache':
 
         connector.delete_quotes_cache()
 
-        message='The cache was cleared!'
+        message='<div class="alert alert-success">The cache was cleared!<div>'
     elif user_request == 'injestmovie':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
@@ -114,11 +114,11 @@ def secret():
             if connector.in_database(imdb_movie_id):
                 raise Exception("Movie already in the database")
             movie=scrape.scrape_movie(imdb_movie_id=imdb_movie_id)
-            message='The movie "%s" was injested!' % movie['movie_name']
+            message='<div class="alert alert-success">The movie "%s" was injested!</div>' % movie['movie_name']
             connector.add_movie(movie)
         except Exception, ex:
             traceback.print_exc(sys.stdout)
-            message='Unable to injest movie! %s' % ex
+            message='<div class="alert alert-error">Unable to injest movie! %s</div>' % ex
     elif user_request == 'getposter':
         try:
             import boto
@@ -128,10 +128,10 @@ def secret():
             local_poster_thumbnail_filename=scrape_movie_poster_thumbnail(imdb_movie_id, connector, poster_thumbnail_dir)
             if local_poster_thumbnail_filename is not None:
                 injest_movie_poster_into_s3(local_poster_thumbnail_filename,s3)
-            message='Injested poster for movie "%s"' % imdb_movie_id
+            message='<div class="alert alert-success">Injested poster for movie "%s"</div>' % imdb_movie_id
         except Exception, ex:
             traceback.print_exc(sys.stdout)
-            message='Unable to injest poster! %s' % ex
+            message='<div class="alert alert-error">Unable to injest poster! %s</div>' % ex
 
     elif user_request is None:
 

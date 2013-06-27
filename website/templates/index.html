@@ -1,34 +1,49 @@
 {% extends "layout.html" %}
 {% block body %}
 
-<center>
 
-  <h1>Let me tell you about a movie!</h1><br></br>
+  <br>
 
-<form class="form-search" action="search.html" method="GET">
-  <input type="text" class="input-medium search-query" name="q" placeholder="What movie?" >
-  <button type="submit" class="btn btn-inverse">Search</button>
-</form>
+  <div class="row">
+    <div class="span6 offset3">
+  <div class="well">
 
-<br/><br/>
+    <center>
+      <h1>Let me tell you about a movie!</h1><br></br>
 
-  <h1>Pick a top movie</h1><br></br>
-
-{% for year in top_grossing %}
-
-<div class="row">
-{% for movie in top_grossing[year] %}
- <div class="span3">
-{{ movie|safe }}
+    <form class="form-search" action="search.html" method="GET">
+      <input type="text" class="input-medium search-query" name="q" placeholder="What movie?" >
+      <button type="submit" class="btn btn-inverse">Search</button>
+    </form>
+    </center>
+  </div>
+  </div>
 </div>
-{% endfor %}
 
-</div>
-<br/><br/>
+<br/><br/><br/><br/>
 
-{% endfor %}
+  <div class="well">
 
-</center>
+    <center>
+      <h1>Pick a top movie</h1><br></br>
+
+      {% for year in top_grossing %}
+
+      <div class="row-fluid">
+      {% for movie in top_grossing[year] %}
+         <div class="span3">
+        {{ movie|safe }}
+        </div>
+      {% endfor %}
+
+      </div>
+      <br/><br/>
+
+      {% endfor %}
+
+        </div>
+    </center>
+  </div>
 
 <br>
 
