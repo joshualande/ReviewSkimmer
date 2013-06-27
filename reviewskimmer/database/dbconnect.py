@@ -321,7 +321,7 @@ class IMDBDatabaseConnector(object):
             SELECT count(*)
             FROM information_schema.TABLES
             WHERE (TABLE_SCHEMA = 'reviewskimmer') 
-            AND (TABLE_NAME = 'rs_quote_cache')""")
+            AND (TABLE_NAME = 'rs_quotes_cache')""")
         l=c.fetchall()
         return l[0][0]==1
 
@@ -330,22 +330,22 @@ class IMDBDatabaseConnector(object):
         """ Code to cache quotes """
         db=self.db
         db.query("""
-            CREATE TABLE rs_quote_cache (
+            CREATE TABLE rs_quotes_cache (
             rs_imdb_movie_id INT NOT NULL PRIMARY KEY,
             rs_data LONGBLOB NOT NULL
             );
         """)
 
-    def delete_quote_cache(self):
+    def delete_quotes_cache(self):
         """ Delete all tables from the IMDB databse. """
         db=self.db
-        db.query("DROP TABLE IF EXISTS rs_quote_cache")
+        db.query("DROP TABLE IF EXISTS rs_quotes_cache")
 
     def are_quotes_cached(self,imdb_movie_id):
         c=self.cursor
 
         ex=c.execute("""
-            select * FROM rs_quote_cache WHERE rs_imdb_movie_id=%s""",
+            select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         l=len(c.fetchall())
@@ -354,7 +354,7 @@ class IMDBDatabaseConnector(object):
     def set_cached_quotes(self, imdb_movie_id, _data):
         c=self.cursor
         c.execute("""
-            INSERT INTO rs_quote_cache
+            INSERT INTO rs_quotes_cache
             VALUES (%s,%s)""", 
             (imdb_movie_id, pickle.dumps(_data))
         )
@@ -367,7 +367,7 @@ class IMDBDatabaseConnector(object):
             raise Exception("No cached quotes for movie %s" % imdb_movie_id)
         c=self.cursor
         ex=c.execute("""
-            select * FROM rs_quote_cache WHERE rs_imdb_movie_id=%s""",
+            select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         l=c.fetchall()
