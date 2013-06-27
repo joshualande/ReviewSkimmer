@@ -1,10 +1,12 @@
 {% extends "layout.html" %}
 {% block body %}
 
-<div class="row">
+<div class="well well-small">
+
+<div class="row-fluid">
   <div class="span6">
     <center>
-      <h1>Top:</h1><br/>
+      <h1>Worst</h1><br/>
       {% for t in top %}
       {{t|safe}}</br></br>
       {% endfor %}
@@ -12,13 +14,15 @@
   </div>
   <div class="span6">
     <center>
-      <h1>Bottom:</h1><br/>
+      <h1>Best</h1><br/>
       {% for b in bottom %}
       {{b|safe}}</br></br>
       {% endfor %}
     </center>
   </div>
 </div>
+
+<div>
 
 {% endblock %}
 
