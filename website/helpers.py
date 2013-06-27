@@ -9,7 +9,7 @@ def get_search_url(imdb_movie_id,connector):
 def get_poster_thumbnail(imdb_movie_id,connector):
     path='https://s3-us-west-2.amazonaws.com/reviewskimmer/poster_thumbnail_%d.jpg' % imdb_movie_id
     url=get_search_url(imdb_movie_id,connector)
-    return '<a href="%s"><img src="%s"></a>' % (url,path)
+    return '<a href="%s"><img class="img-polaroid" src="%s"></a>' % (url,path)
 
 def get_top_grossing_dict(connector, years, movies_per_year):
     top_grossing=connector.get_top_grossing()

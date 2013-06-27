@@ -3,31 +3,26 @@
 
 {% if imdb_movie_id %}
 
-<div class="well">
-
-<div class="row-fluid">
-  <div class="span3">
-
-    {{ thumbnail_url_html|safe }}
-
+<div class="row">
+  <div class="span10 offset1">
+    <div class="well">
+    <div class="row-fluid">
+      <div class="span3">
+        {{ thumbnail_url_html|safe }}
+        </div>
+        <div class="span9">
+          <h1>{{ movie_name }}</h1><br/>
+            {% for quote in top_quotes %}
+            <span style="font-size:24px">"{{ quote['text'] |safe }}"</span> &#8212;<a href="{{ quote['reviewer_url'] }}">{{ quote['reviewer'] }}</a>
+            <br/><br/>
+            {% endfor %}
+        </ul>
+        </div>
+      </div>
     </div>
-    <div class="span9">
-
-
-      <h1>{{ movie_name }}</h1><br/>
-
-        {% for quote in top_quotes %}
-
-        <span style="font-size:24px">"{{ quote['text'] |safe }}"</span> &#8212;<a href="{{ quote['reviewer_url'] }}">{{ quote['reviewer'] }}</a>
-
-        <br/><br/>
-        {% endfor %}
-    </ul>
-
-    </div>
+  </div>
 </div>
 
-<div>
 
 {% if debug %}
   <br/>
