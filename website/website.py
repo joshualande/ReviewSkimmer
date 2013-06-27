@@ -1,4 +1,7 @@
 #!/usr/bin/env python
+from os.path import expandvars
+import sys
+import traceback
 import os
 import argparse
 
@@ -7,8 +10,11 @@ from flask import render_template
 from flask import request
 
 from reviewskimmer.analysis.summarize import ReviewSummarizer,CachedReviewSummarizer
+from reviewskimmer.imdb import scrape 
+from reviewskimmer.imdb.poster import scrape_movie_poster_thumbnail,injest_movie_poster_into_s3
 
 from helpers import get_poster_thumbnail,get_top_grossing_dict
+
 
 
 app = Flask(__name__)
@@ -22,6 +28,7 @@ connector=IMDBDatabaseConnector(db)
 parser = argparse.ArgumentParser(description='Process some integers.')
 parser.add_argument('--amazon',default=False, action='store_true')
 parser.add_argument('--debug',default=False, action='store_true')
+parser.add_argument('--nocache',default=False, action='store_true')
 args = parser.parse_args()
 
 
@@ -44,7 +51,8 @@ def search():
     if imdb_movie_id is not None:
         thumbnail_url_html=get_poster_thumbnail(imdb_movie_id,connector)
 
-        summarizer=CachedReviewSummarizer(connector=connector,
+        ob=ReviewSummarizer if args.nocache else CachedReviewSummarizer
+        summarizer=ob(connector=connector,
             imdb_movie_id=imdb_movie_id, num_occurances=5)
 
         return render_template('search.html', 
@@ -86,6 +94,52 @@ def about():
 @app.route('/contact.html')
 def contact():
     return render_template('contact.html')
+
+@app.route('/secret.html')
+def secret():
+    user_request = request.args.get('q', None)
+    
+    if user_request == 'cachepopular':
+
+        message='The popular movies were cached!'
+    elif user_request == 'clearcache':
+
+        connector.delete_quotes_cache()
+
+        message='The cache was cleared!'
+    elif user_request == 'injestmovie':
+        try:
+            imdb_movie_id=int(request.args.get('imdb_movie_id', None))
+
+            if connector.in_database(imdb_movie_id):
+                raise Exception("Movie already in the database")
+            movie=scrape.scrape_movie(imdb_movie_id=imdb_movie_id)
+            message='The movie "%s" was injested!' % movie['movie_name']
+            connector.add_movie(movie)
+        except Exception, ex:
+            traceback.print_exc(sys.stdout)
+            message='Unable to injest movie! %s' % ex
+    elif user_request == 'getposter':
+        try:
+            import boto
+            s3 = boto.connect_s3()
+            imdb_movie_id=int(request.args.get('imdb_movie_id', None))
+            poster_thumbnail_dir=expandvars('$REVIEWSKIMMER_MEDIA_DIR/posters_thumbnails')
+            local_poster_thumbnail_filename=scrape_movie_poster_thumbnail(imdb_movie_id, connector, poster_thumbnail_dir)
+            if local_poster_thumbnail_filename is not None:
+                injest_movie_poster_into_s3(local_poster_thumbnail_filename,s3)
+            message='Injested poster for movie "%s"' % imdb_movie_id
+        except Exception, ex:
+            traceback.print_exc(sys.stdout)
+            message='Unable to injest poster! %s' % ex
+
+    elif user_request is None:
+
+        message=None
+    else:
+        raise Exception('Unrecognized request "%s"' % user_request)
+
+    return render_template('secret.html',message=message)
 
 
 if __name__ == '__main__':
