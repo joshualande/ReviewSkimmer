@@ -38,9 +38,12 @@ class ReviewSummarizer(object):
             if score>=6 or score <=5:
                 if score>=6: classification='pos'
                 if score <=5: classification='neg'
+
+                # not sure why this is needed for Flask to not crash.
+                text=review['rs_review_text']
                 r=dict(text=dict(
-                    raw=review['rs_review_text'],
-                    raw_tokenized=nltk.word_tokenize(review['rs_review_text'])
+                    raw=text,
+                    raw_tokenized=nltk.word_tokenize(text)
                     )
                     )
                 r['classification']=classification
