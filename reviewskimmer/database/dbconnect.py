@@ -66,7 +66,7 @@ class IMDBDatabaseConnector(object):
             CREATE TABLE rs_reviews (
             rs_imdb_movie_id INT NOT NULL,
             rs_imdb_reviewer_id INT NOT NULL,
-            rs_reviwer TEXT,
+            rs_reviewer TEXT,
             rs_review_movie_score INT,
             rs_review_date DATE NOT NULL,
             rs_num_likes INT,
