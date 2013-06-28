@@ -21,6 +21,12 @@
                -o-background-size: cover;
                background-size: cover;
       }
+
+    .popover {
+      max-width: 552px;
+      font-size: 14px;
+    } 
+
     </style>
     <link href="{{ config["APP_URL"] }}/static/css/bootstrap-responsive.css" rel="stylesheet">
 
@@ -69,18 +75,8 @@
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
     <script src="{{ config["APP_URL"] }}/static/js/jquery.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-transition.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-alert.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-modal.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-dropdown.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-scrollspy.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-tab.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-tooltip.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-popover.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-button.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-collapse.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-carousel.js"></script>
-    <script src="{{ config["APP_URL"] }}/static/js/bootstrap-typeahead.js"></script>
+    <script src="{{ config["APP_URL"] }}/static/js/bootstrap.min.js"></script>
+    {% block script %}{% endblock %}
 
   </body>
 </html>
