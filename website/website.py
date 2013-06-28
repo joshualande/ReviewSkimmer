@@ -31,8 +31,6 @@ parser.add_argument('--debug',default=False, action='store_true')
 parser.add_argument('--nocache',default=False, action='store_true')
 args = parser.parse_args()
 
-
-
 app.debug=True
 
 @app.route('/')
@@ -55,8 +53,35 @@ def search():
         summarizer=ob(connector=connector,
             imdb_movie_id=imdb_movie_id, num_occurances=5)
 
+        top_quotes=summarizer.get_top_quotes()
+        for quote in top_quotes:
+            word=quote['word']
+
+            if quote == top_quotes[0]:
+                print quote
+
+            formatted_more_quotes = ['&quot%s&quot &#8212; <a href=&quot%s&quot>%s</a>' % \
+                    (i['text'].replace(word,'<a><b>%s</b></a>' % word).replace('"','&quot'),
+                        i['reviewer_url'],
+                        i['reviewer']) \
+                    for i in quote['more_quotes']]
+
+            content = '<br><br>'.join(formatted_more_quotes)
+
+            first_quote = quote['first_quote']
+            first_quote_html = first_quote['text']
+            first_quote_html = '<span style="font-size:24px">"%s"</span>&#8212;<a href="%s">%s</a>' % (first_quote_html,first_quote['reviewer_url'],first_quote['reviewer'])
+            first_quote_html = first_quote_html.replace(word,
+                    """<a id="hover" 
+                         rel="popover" 
+                         data-content="%s" 
+                         data-original-title="More <b>%s</b> Reviews">
+                         <b>%s</b></a>""" % (content,word,word))
+            quote['first_quote_html'] = first_quote_html
+
+
         return render_template('search.html', 
-                top_quotes=summarizer.get_top_quotes(),
+                top_quotes=top_quotes,
                 top_word_occurances=summarizer.get_top_word_occurances(),
                 debug=args.debug,
                 movie_name=movie_name,
@@ -81,10 +106,7 @@ def charts():
     top=[get_poster_thumbnail(i,connector) for i in top]
     bottom=[get_poster_thumbnail(i,connector) for i in bottom]
 
-
-    return render_template('charts.html',
-            top=top,
-            bottom=bottom)
+    return render_template('charts.html', top=top, bottom=bottom)
 
 
 @app.route('/about.html')

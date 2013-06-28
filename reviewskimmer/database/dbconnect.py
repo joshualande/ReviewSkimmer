@@ -270,7 +270,6 @@ class IMDBDatabaseConnector(object):
         l=c.fetchall()
         assert len(l)<=1
         if len(l)==1:
-            print 'l=',l,'x'*100
             return l[0][0]
         else:
             return None
