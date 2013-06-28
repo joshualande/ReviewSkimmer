@@ -14,8 +14,8 @@
         {{ thumbnail_url_html|safe }}
         </div>
         <div class="span9">
-            {% for quote in top_quotes %}
-            {{ quote['first_quote_html'] |safe }}<br/><br/>
+            {% for quote in formatted_quotes %}
+            {{ quote |safe }}<br/><br/>
             {% endfor %}
         </ul>
         </div>
