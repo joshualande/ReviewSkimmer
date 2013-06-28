@@ -15,13 +15,13 @@
         </div>
         <div class="span9">
             {% for quote in top_quotes %}
-            <span style="font-size:24px">"{{ quote['text'] |safe }}"</span> &#8212;<a href="{{ quote['reviewer_url'] }}">{{ quote['reviewer'] }}</a>
-            <br/><br/>
+            {{ quote['first_quote_html'] |safe }}<br/><br/>
             {% endfor %}
         </ul>
         </div>
       </div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -45,5 +45,29 @@
 {% else %}
     "{{ movie_name}}" not found in database!
 {% endif %}
+
+
+
+{% endblock %}
+
+
+
+{% block script %}
+
+  <script>
+
+<!-- This black magic came from https://drupal.org/node/1437850 -->
+!function( $ ){
+  $(function () { 
+      $('a[rel=popover]').popover(
+        {placement:'bottom', 
+         trigger:'hover focus',
+         html:'true',
+        }); 
+    });
+}( window.jQuery )
+
+  </script>
+
 
 {% endblock %}

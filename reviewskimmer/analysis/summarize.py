@@ -17,22 +17,22 @@ class ReviewSummarizer(object):
         self._summarize()
 
     def _summarize(self):
-        all_reviews=self._get_reviews()
-        top_word_occurances=self._find_top_occuranges(all_reviews)
-        top_quotes=self._find_top_quotes(top_word_occurances,all_reviews)
+        self._compute_all_reviews()
+        top_word_occurances=self._find_top_occuranges()
+        top_quotes=self._find_top_quotes(top_word_occurances)
 
-        self._data = dict(nreviews=len(all_reviews),
+        self._data = dict(nreviews=len(self.all_reviews),
                 top_word_occurances=top_word_occurances,
                 top_quotes=top_quotes)
 
-    def _get_reviews(self):
+    def _compute_all_reviews(self):
 
         # Now, find representative quotes
         tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 
         reviews_df=self.connector.get_reviews(self.imdb_movie_id)
 
-        all_reviews=[]
+        self.all_reviews=[]
         for i,review in reviews_df.iterrows():
             score=review['rs_review_movie_score']
             if score>=6 or score <=5:
@@ -61,10 +61,9 @@ class ReviewSummarizer(object):
                 # combine only tokens from good 'short' sentences
                 r['text']['good_tokens'] = list(itertools.chain(*[i['tokenized'] for i in r['good_sentences']]))
 
-                all_reviews.append(r)                   
-        return all_reviews
+                self.all_reviews.append(r)                   
 
-    def _find_top_occuranges(self,all_reviews):
+    def _find_top_occuranges(self):
         most_informative_words = self.connector.get_most_informative_features()
 
         occurances = dict()
@@ -74,7 +73,7 @@ class ReviewSummarizer(object):
             classification = j['rs_classification']
             odds_ratio = j['rs_odds_ratio']
 
-            num_found=sum(word in i['text']['good_tokens'] for i in all_reviews if i['classification'] == classification)
+            num_found=sum(word in i['text']['good_tokens'] for i in self.all_reviews if i['classification'] == classification)
             occurances[word]=dict(
                 num_found=num_found,
                 odds_ratio=float(odds_ratio),
@@ -88,31 +87,47 @@ class ReviewSummarizer(object):
         top_word_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
         return top_word_occurances
 
-    def _find_top_quotes(self,top_word_occurances,all_reviews):
+    def _find(self,word,classification):
+        for r in self.all_reviews:
+            for s in r['good_sentences']:
+                if word in s['tokenized'] and classification==r['classification'] \
+                        and s['raw'] not in self._raw_top_quotes:
+                    self._raw_top_quotes.append(s['raw'])
+                    return s['raw'],r['reviewer'],r['reviewer_url']
+        return None
+
+
+    def _find_top_quotes(self,top_word_occurances):
         top_quotes=[]
-        raw_top_quotes=[]
+        self._raw_top_quotes=[]
         for word,v in top_word_occurances.items():
             # find top review where word occurs
 
             classification = v['classification']
 
-            def find(word,classification,all_reviews):
-                for r in all_reviews:
-                    for s in r['good_sentences']:
-                        if word in s['tokenized'] and classification==r['classification'] \
-                            and s['raw'] not in raw_top_quotes:
-                            print r
-                            return s['raw'],r['reviewer'],r['reviewer_url']
-                return None
         
-            first_quote,reviewer,reviewer_url=find(word,classification,all_reviews)
+            first_quote,reviewer,reviewer_url=self._find(word,classification)
             if first_quote is None: continue
 
-            raw_top_quotes.append(first_quote)
-            first_quote=first_quote.replace(word,'<b>%s</b>' % word)
             top_quotes.append(
-                    dict(text=first_quote,reviewer=reviewer,reviewer_url=reviewer_url)
+                    dict(
+                        word=word,
+                        first_quote=dict(text=first_quote,
+                                        reviewer=reviewer,
+                                        reviewer_url=reviewer_url),
+                        more_quotes=[],
+                        )
             )
+
+        for i in range(4):
+            for q in top_quotes:
+                word=q['word']
+                next_quote,reviewer,reviewer_url=self._find(word,classification)
+                if next_quote is None: continue
+                q['more_quotes'].append(dict(text=next_quote,
+                    reviewer=reviewer,
+                    reviewer_url=reviewer_url))
+
         return top_quotes
 
     def get_top_word_occurances(self):
