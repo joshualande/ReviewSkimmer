@@ -94,7 +94,7 @@ class ReviewSummarizer(object):
                         and s['raw'] not in self._raw_top_quotes:
                     self._raw_top_quotes.append(s['raw'])
                     return s['raw'],r['reviewer'],r['reviewer_url']
-        return None
+        return None,None,None
 
 
     def _find_top_quotes(self,top_word_occurances):
