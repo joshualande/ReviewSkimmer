@@ -9,5 +9,5 @@ This repository contains the folder website, which contains the Flask web app fo
 It also contains the folder reviewskimmer, which contains a python module for scraping movies from IMDb,
 a module for interacting with a MySQL database, and a module for performing an analysis on movie reviews.
 
-This is the source code for the website ReveiwSkim.com created by Joshua Lande for the Insight Data Science 
+This is the source code for the website ReveiwSkimmer.com created by Joshua Lande for the Insight Data Science 
 Fellows Program (insightdatascience.com).
