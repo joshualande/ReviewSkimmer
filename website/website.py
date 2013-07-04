@@ -18,11 +18,17 @@ from helpers import get_top_for_website, get_bottom_for_website
 from reviewskimmer.utils.list import flatten_dict
 
 app = Flask(__name__)
-app.config.from_envvar('REVIEWSKIMMER_CONFIG')
-
 
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
-db = app.config['DB']
+
+import MySQLdb
+db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
+        user=os.environ['RDS_USERNAME'],
+        port=int(os.environ['RDS_PORT']),
+        passwd=os.environ['RDS_PASSWORD'],
+        db=os.environ['RDS_DB_NAME'])
+
+
 connector=IMDBDatabaseConnector(db)
 
 parser = argparse.ArgumentParser(description='Process some integers.')
