@@ -1,5 +1,7 @@
-
-from collections import OrderedDict
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 from pandas import DataFrame
 
 def get_most_informative_features(classifier, n=10, column_prefix=''): 
