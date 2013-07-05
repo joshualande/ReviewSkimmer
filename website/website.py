@@ -3,7 +3,6 @@ from os.path import expandvars
 import sys
 import traceback
 import os
-import argparse
 
 from flask import Flask
 from flask import render_template
@@ -18,6 +17,7 @@ from helpers import get_top_for_website, get_bottom_for_website
 from reviewskimmer.utils.list import flatten_dict
 
 app = Flask(__name__)
+website = app # This is needed by elastic beanstalk
 
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 
@@ -28,14 +28,7 @@ db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
         passwd=os.environ['RDS_PASSWORD'],
         db=os.environ['RDS_DB_NAME'])
 
-
 connector=IMDBDatabaseConnector(db)
-
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--amazon',default=False, action='store_true')
-parser.add_argument('--debug',default=False, action='store_true')
-parser.add_argument('--nocache',default=False, action='store_true')
-args = parser.parse_args()
 
 app.debug=True
 
@@ -148,7 +141,11 @@ def secret():
 if __name__ == '__main__':
 
     import argparse
-
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--amazon',default=False, action='store_true')
+    parser.add_argument('--debug',default=False, action='store_true')
+    parser.add_argument('--nocache',default=False, action='store_true')
+    args = parser.parse_args()
 
     if args.amazon:
         app.run(host='0.0.0.0',port=80)
