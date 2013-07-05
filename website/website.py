@@ -3,7 +3,6 @@ from os.path import expandvars
 import sys
 import traceback
 import os
-import argparse
 
 from flask import Flask
 from flask import render_template
@@ -11,13 +10,11 @@ from flask import request
 
 from reviewskimmer.analysis.summarize import ReviewSummarizer,CachedReviewSummarizer
 
-from helpers import get_poster_thumbnail,format_quotes
-from helpers import get_top_grossing_thumbnails,get_top_grossing_imdb_movie_ids
-from helpers import try_load_poster,try_injest_movie
-from helpers import get_top_for_website, get_bottom_for_website
+from reviewskimmer.website import helpers
 from reviewskimmer.utils.list import flatten_dict
 
 app = Flask(__name__)
+website = app # This is needed by elastic beanstalk
 
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 
@@ -28,23 +25,16 @@ db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
         passwd=os.environ['RDS_PASSWORD'],
         db=os.environ['RDS_DB_NAME'])
 
-
 connector=IMDBDatabaseConnector(db)
-
-parser = argparse.ArgumentParser(description='Process some integers.')
-parser.add_argument('--amazon',default=False, action='store_true')
-parser.add_argument('--debug',default=False, action='store_true')
-parser.add_argument('--nocache',default=False, action='store_true')
-args = parser.parse_args()
 
 app.debug=True
 
 def _get_top_grossing(connector,thumbnails=False):
     kwargs=dict(years=range(2013,2005,-1), movies_per_year=4)
     if thumbnails:
-        top_grossing = get_top_grossing_thumbnails(connector,**kwargs)
+        top_grossing = helpers.get_top_grossing_thumbnails(connector,**kwargs)
     else:
-        top_grossing = get_top_grossing_imdb_movie_ids(connector,**kwargs)
+        top_grossing = helpers.get_top_grossing_imdb_movie_ids(connector,**kwargs)
     return top_grossing
 
 @app.route('/')
@@ -65,13 +55,13 @@ def search():
     imdb_movie_id=connector.get_newest_imdb_movie_id(movie_name)
 
     if imdb_movie_id is not None:
-        thumbnail_url_html=get_poster_thumbnail(imdb_movie_id,connector)
+        thumbnail_url_html=helpers.get_poster_thumbnail(imdb_movie_id,connector)
 
         summarizer = _get_summarizer(imdb_movie_id,nocache=args.nocache)
 
         top_quotes=summarizer.get_top_quotes()
 
-        formatted_quotes = format_quotes(top_quotes)
+        formatted_quotes = helpers.format_quotes(top_quotes)
 
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
@@ -90,11 +80,11 @@ def search():
 
 @app.route('/charts.html')
 def charts():
-    top=get_top_for_website(connector)
-    bottom=get_bottom_for_website(connector)
+    top=helpers.get_top_for_website(connector)
+    bottom=helpers.get_bottom_for_website(connector)
 
-    top=[get_poster_thumbnail(i,connector) for i in top]
-    bottom=[get_poster_thumbnail(i,connector) for i in bottom]
+    top=[helpers.get_poster_thumbnail(i,connector) for i in top]
+    bottom=[helpers.get_poster_thumbnail(i,connector) for i in bottom]
 
     return render_template('charts.html', top=top, bottom=bottom)
 
@@ -113,8 +103,8 @@ def secret():
     
     if user_request == 'cachepopular':
         all_movies = flatten_dict(_get_top_grossing(connector,thumbnails=False)) + \
-                get_top_for_website(connector) + \
-                get_bottom_for_website(connector)
+                helpers.get_top_for_website(connector) + \
+                helpers.get_bottom_for_website(connector)
         for imdb_movie_id in all_movies:
             print 'Loading movie:',imdb_movie_id
             summarizer = _get_summarizer(imdb_movie_id,nocache=False)
@@ -127,14 +117,14 @@ def secret():
     elif user_request == 'injestmovie':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
-            message=try_injest_movie(imdb_movie_id,connector=connector)
+            message=helpers.try_injest_movie(imdb_movie_id,connector=connector)
         except Exception, ex:
             traceback.print_exc(sys.stdout)
             message='<div class="alert alert-error">Unable to injest movie! %s</div>' % ex
     elif user_request == 'getposter':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
-            message=try_load_poster(imdb_movie_id,connector=connector)
+            message=helpers.try_load_poster(imdb_movie_id,connector=connector)
         except Exception, ex:
             message='<div class="alert alert-error">Unable to injest movie! %s</div>' % ex
     elif user_request is None:
@@ -148,7 +138,11 @@ def secret():
 if __name__ == '__main__':
 
     import argparse
-
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--amazon',default=False, action='store_true')
+    parser.add_argument('--debug',default=False, action='store_true')
+    parser.add_argument('--nocache',default=False, action='store_true')
+    args = parser.parse_args()
 
     if args.amazon:
         app.run(host='0.0.0.0',port=80)

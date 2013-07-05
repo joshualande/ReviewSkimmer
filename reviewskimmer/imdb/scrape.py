@@ -1,6 +1,9 @@
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 import re
 import os
-from collections import OrderedDict
 import datetime
 from os.path import expandvars,join
 import traceback
