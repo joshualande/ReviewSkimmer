@@ -1,8 +1,11 @@
+try:
+    from collections import OrderedDict
+except:
+    from ordereddict import OrderedDict
 import traceback
 import sys
 from os.path import expandvars
 import urllib
-from collections import OrderedDict
 from reviewskimmer.imdb.poster import scrape_movie_poster_thumbnail,injest_movie_poster_into_s3
 from reviewskimmer.imdb import scrape
 
