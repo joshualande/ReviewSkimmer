@@ -27,7 +27,7 @@ db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
 
 connector=IMDBDatabaseConnector(db)
 
-app.debug=True
+app.debug=False
 
 def _get_top_grossing(connector,thumbnails=False):
     kwargs=dict(years=range(2013,2005,-1), movies_per_year=4)
