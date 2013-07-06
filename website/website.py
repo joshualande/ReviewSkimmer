@@ -27,7 +27,7 @@ db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
 
 connector=IMDBDatabaseConnector(db)
 
-app.debug=True
+app.debug=False
 
 def _get_top_grossing(connector,thumbnails=False):
     kwargs=dict(years=range(2013,2005,-1), movies_per_year=4)
@@ -135,13 +135,4 @@ def secret():
 
 
 if __name__ == '__main__':
-
-    import argparse
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--amazon',default=False, action='store_true')
-    args = parser.parse_args()
-
-    if args.amazon:
-        app.run(host='0.0.0.0',port=80)
-    else:
-        app.run() 
+    app.run() 
