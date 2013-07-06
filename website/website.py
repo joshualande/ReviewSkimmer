@@ -42,9 +42,8 @@ def index():
     top_grossing=_get_top_grossing(connector,thumbnails=True)
     return render_template('index.html', top_grossing=top_grossing)
 
-def _get_summarizer(imdb_movie_id,nocache=False):
-    ob=ReviewSummarizer if nocache else CachedReviewSummarizer
-    summarizer=ob(connector=connector,
+def _get_summarizer(imdb_movie_id):
+    summarizer=CachedReviewSummarizer(connector=connector,
         imdb_movie_id=imdb_movie_id, num_occurances=5)
     return summarizer
 
@@ -57,7 +56,7 @@ def search():
     if imdb_movie_id is not None:
         thumbnail_url_html=helpers.get_poster_thumbnail(imdb_movie_id,connector)
 
-        summarizer = _get_summarizer(imdb_movie_id,nocache=args.nocache)
+        summarizer = _get_summarizer(imdb_movie_id)
 
         top_quotes=summarizer.get_top_quotes()
 
@@ -66,7 +65,7 @@ def search():
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
                 top_word_occurances=summarizer.get_top_word_occurances(),
-                debug=args.debug,
+                debug=app.debug,
                 movie_name=movie_name,
                 number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
@@ -107,7 +106,7 @@ def secret():
                 helpers.get_bottom_for_website(connector)
         for imdb_movie_id in all_movies:
             print 'Loading movie:',imdb_movie_id
-            summarizer = _get_summarizer(imdb_movie_id,nocache=False)
+            summarizer = _get_summarizer(imdb_movie_id)
 
         message='<div class="alert alert-success">The popular movies were cached!</div>'
 
@@ -140,8 +139,6 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--amazon',default=False, action='store_true')
-    parser.add_argument('--debug',default=False, action='store_true')
-    parser.add_argument('--nocache',default=False, action='store_true')
     args = parser.parse_args()
 
     if args.amazon:
