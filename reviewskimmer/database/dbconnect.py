@@ -95,7 +95,6 @@ class IMDBDatabaseConnector(object):
 
     def _add_movie_description(self,movie):
         """ Add in the IMDB descriptions of the movie. """
-        c=self.db.cursor()
 
         rs_imdb_movie_id=movie['imdb_movie_id']
         rs_movie_name=movie['movie_name']
@@ -108,6 +107,7 @@ class IMDBDatabaseConnector(object):
         rs_imdb_poster_thumbnail_url=self.format_url(movie['imdb_poster_thumbnail_url'])
         rs_imdb_description=movie['imdb_description']
 
+        c=self.db.cursor()
         c.execute("""
             INSERT INTO rs_movies
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
@@ -139,8 +139,6 @@ class IMDBDatabaseConnector(object):
         comes from reviewskimmer.imdb.scrape.scrape_movie to the
         database. """
 
-        c=self.db.cursor()
-
         rs_imdb_movie_id=review['imdb_movie_id']
         rs_imdb_reviewer_id=review['imdb_reviewer_id']
         reviwer=review['reviewer']
@@ -154,6 +152,7 @@ class IMDBDatabaseConnector(object):
         imdb_review_url=self.format_url(review['imdb_review_url'])
         imdb_review_text=review['imdb_review_text']
 
+        c=self.db.cursor()
         c.execute("""
             INSERT INTO rs_reviews 
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
@@ -163,9 +162,6 @@ class IMDBDatabaseConnector(object):
                 imdb_review_url, imdb_review_text)
         )
         c.close()
-
-        # This is necessary: http://mysql-python.sourceforge.net/MySQLdb.html
-        self.db.commit()
 
     def _add_all_reviews(self,reviews):
         for review in reviews:
@@ -180,28 +176,25 @@ class IMDBDatabaseConnector(object):
         self._del_movie_description(imdb_movie_id)
 
     def _del_movie_description(self,imdb_movie_id):
-        c=self.db.cursor()
 
+        c=self.db.cursor()
         c.execute("""
             DELETE FROM rs_movies
             WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
-        self.db.commit()
         c.close()
 
     def _del_all_reviews_for_movie(self,imdb_movie_id):
 	""" Remove every review for a movie specified by imdb_movie_id.
 	"""
         c=self.db.cursor()
-
         c.execute("""
             DELETE FROM rs_reviews
             WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         c.close()
-        self.db.commit()
 
     def get_nreviews(self,imdb_movie_id):
         return len(self.get_reviews(imdb_movie_id))
@@ -210,7 +203,6 @@ class IMDBDatabaseConnector(object):
         """ Read all revies for the movie with a given imdb movie id.
         """
         c=self.db.cursor()
-
         ex=c.execute("""
             select * FROM rs_reviews WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
@@ -223,8 +215,8 @@ class IMDBDatabaseConnector(object):
         return self.in_review_database(imdb_movie_id) and self.in_movie_database(imdb_movie_id)
 
     def in_review_database(self,imdb_movie_id):
-        c=self.db.cursor()
 
+        c=self.db.cursor()
         ex=c.execute("""
             select * FROM rs_movies WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
@@ -236,8 +228,8 @@ class IMDBDatabaseConnector(object):
 
     def in_movie_database(self,imdb_movie_id):
         """ Test if a movie with a given imdb movie id is in the database. """
-        c=self.db.cursor()
 
+        c=self.db.cursor()
         ex=c.execute("""
             select * FROM rs_movies WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
@@ -248,8 +240,8 @@ class IMDBDatabaseConnector(object):
         return l==1
 
     def get_newest_imdb_movie_id(self,movie_name):
-        c=self.db.cursor()
             
+        c=self.db.cursor()
         ex=c.execute("""
             SELECT rs_imdb_movie_id 
             FROM rs_movies WHERE rs_movie_name=%s 
@@ -266,8 +258,8 @@ class IMDBDatabaseConnector(object):
 
     def get_imdb_movie_id(self,movie_name):
         """ Test if a movie with a given imdb movie id is in the database. """
-        c=self.db.cursor()
 
+        c=self.db.cursor()
         ex=c.execute("""
             SELECT rs_imdb_movie_id FROM rs_movies WHERE rs_movie_name=%s""",
             (movie_name,)
@@ -321,6 +313,7 @@ class IMDBDatabaseConnector(object):
         return df_mysql
 
     def does_quotes_cache_exist(self):
+
         c=self.db.cursor()
         c.execute("""
             SELECT count(*)
@@ -348,6 +341,7 @@ class IMDBDatabaseConnector(object):
         db.query("DROP TABLE IF EXISTS rs_quotes_cache")
 
     def are_quotes_cached(self,imdb_movie_id):
+
         c=self.db.cursor()
         ex=c.execute("""
             select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
@@ -358,19 +352,19 @@ class IMDBDatabaseConnector(object):
         return l>0
 
     def set_cached_quotes(self, imdb_movie_id, _data):
+
         c=self.db.cursor()
         c.execute("""
             INSERT INTO rs_quotes_cache
             VALUES (%s,%s)""", 
             (imdb_movie_id, pickle.dumps(_data))
         )
-        # This is necessary: http://mysql-python.sourceforge.net/MySQLdb.html
-        self.db.commit()
         c.close()
 
     def get_cached_quotes(self, imdb_movie_id):
         if not self.are_quotes_cached(imdb_movie_id):
             raise Exception("No cached quotes for movie %s" % imdb_movie_id)
+
         c=self.db.cursor()
         ex=c.execute("""
             select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
