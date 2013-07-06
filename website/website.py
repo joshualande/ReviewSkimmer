@@ -4,6 +4,7 @@ import sys
 import traceback
 import os
 
+import flask
 from flask import Flask
 from flask import render_template
 from flask import request
@@ -17,17 +18,23 @@ app = Flask(__name__)
 application = app # This is needed by elastic beanstalk
 
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
-
 import MySQLdb
-db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
-        user=os.environ['RDS_USERNAME'],
-        port=int(os.environ['RDS_PORT']),
-        passwd=os.environ['RDS_PASSWORD'],
-        db=os.environ['RDS_DB_NAME'])
 
-connector=IMDBDatabaseConnector(db)
+@app.before_request
+def before_request():
+    flask.g.db=MySQLdb.Connection(host=os.environ['RDS_HOSTNAME'],
+            user=os.environ['RDS_USERNAME'],
+            port=int(os.environ['RDS_PORT']),
+            passwd=os.environ['RDS_PASSWORD'],
+            db=os.environ['RDS_DB_NAME'])
+    flask.g.connector=IMDBDatabaseConnector(flask.g.db)
 
-app.debug=False
+@app.teardown_request
+def teardown_request(exception):
+    flask.g.db = None
+    flask.g.connector = None
+
+app.debug=True
 
 def _get_top_grossing(connector,thumbnails=False):
     kwargs=dict(years=range(2013,2005,-1), movies_per_year=4)
@@ -37,26 +44,27 @@ def _get_top_grossing(connector,thumbnails=False):
         top_grossing = helpers.get_top_grossing_imdb_movie_ids(connector,**kwargs)
     return top_grossing
 
-@app.route('/')
-def index():
-    top_grossing=_get_top_grossing(connector,thumbnails=True)
-    return render_template('index.html', top_grossing=top_grossing)
 
-def _get_summarizer(imdb_movie_id):
+def _get_summarizer(connector,imdb_movie_id):
     summarizer=CachedReviewSummarizer(connector=connector,
         imdb_movie_id=imdb_movie_id, num_occurances=5)
     return summarizer
+
+@app.route('/')
+def index():
+    top_grossing=_get_top_grossing(flask.g.connector,thumbnails=True)
+    return render_template('index.html', top_grossing=top_grossing)
 
 @app.route('/search.html')
 def search():
     movie_name = request.args.get('q', None)
 
-    imdb_movie_id=connector.get_newest_imdb_movie_id(movie_name)
+    imdb_movie_id=flask.g.connector.get_newest_imdb_movie_id(movie_name)
 
     if imdb_movie_id is not None:
-        thumbnail_url_html=helpers.get_poster_thumbnail(imdb_movie_id,connector)
+        thumbnail_url_html=helpers.get_poster_thumbnail(imdb_movie_id,flask.g.connector)
 
-        summarizer = _get_summarizer(imdb_movie_id)
+        summarizer = _get_summarizer(flask.g.connector,imdb_movie_id)
 
         top_quotes=summarizer.get_top_quotes()
 
@@ -65,7 +73,6 @@ def search():
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
                 top_word_occurances=summarizer.get_top_word_occurances(),
-                debug=app.debug,
                 movie_name=movie_name,
                 number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
@@ -79,11 +86,11 @@ def search():
 
 @app.route('/charts.html')
 def charts():
-    top=helpers.get_top_for_website(connector)
-    bottom=helpers.get_bottom_for_website(connector)
+    top=helpers.get_top_for_website(flask.g.connector)
+    bottom=helpers.get_bottom_for_website(flask.g.connector)
 
-    top=[helpers.get_poster_thumbnail(i,connector) for i in top]
-    bottom=[helpers.get_poster_thumbnail(i,connector) for i in bottom]
+    top=[helpers.get_poster_thumbnail(i,flask.g.connector) for i in top]
+    bottom=[helpers.get_poster_thumbnail(i,flask.g.connector) for i in bottom]
 
     return render_template('charts.html', top=top, bottom=bottom)
 
@@ -101,9 +108,9 @@ def secret():
     user_request = request.args.get('q', None)
     
     if user_request == 'cachepopular':
-        all_movies = flatten_dict(_get_top_grossing(connector,thumbnails=False)) + \
-                helpers.get_top_for_website(connector) + \
-                helpers.get_bottom_for_website(connector)
+        all_movies = flatten_dict(_get_top_grossing(flask.g.connector,thumbnails=False)) + \
+                helpers.get_top_for_website(flask.g.connector) + \
+                helpers.get_bottom_for_website(flask.g.connector)
         for imdb_movie_id in all_movies:
             print 'Loading movie:',imdb_movie_id
             summarizer = _get_summarizer(imdb_movie_id)
@@ -111,19 +118,19 @@ def secret():
         message='<div class="alert alert-success">The popular movies were cached!</div>'
 
     elif user_request == 'clearcache':
-        connector.delete_quotes_cache()
+        flask.g.connector.delete_quotes_cache()
         message='<div class="alert alert-success">The cache was cleared!<div>'
     elif user_request == 'injestmovie':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
-            message=helpers.try_injest_movie(imdb_movie_id,connector=connector)
+            message=helpers.try_injest_movie(imdb_movie_id,connector=flask.g.connector)
         except Exception, ex:
             traceback.print_exc(sys.stdout)
             message='<div class="alert alert-error">Unable to injest movie! %s</div>' % ex
     elif user_request == 'getposter':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
-            message=helpers.try_load_poster(imdb_movie_id,connector=connector)
+            message=helpers.try_load_poster(imdb_movie_id,connector=flask.g.connector)
         except Exception, ex:
             message='<div class="alert alert-error">Unable to injest movie! %s</div>' % ex
     elif user_request is None:
