@@ -21,22 +21,6 @@
         </div>
       </div>
 
-{% if debug %}
-  <br/>
-  DEBUGGING:
-  <br/>
-
-  {{ number_reviews }} reviews
-  <br/>
-  Top Occuring Words:
-    <ul>
-      {% for word in top_word_occurances %}
-      <li>{{ word }} - {{ top_word_occurances[word] }} </li>
-      {% endfor %}
-    </ul>
-{% endif %}
-
-
 {% else %}
   <div class="alert alert-error">"{{ movie_name}}" not found in database!</div>
 {% endif %}
