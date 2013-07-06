@@ -65,7 +65,6 @@ def search():
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
                 top_word_occurances=summarizer.get_top_word_occurances(),
-                debug=app.debug,
                 movie_name=movie_name,
                 number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
