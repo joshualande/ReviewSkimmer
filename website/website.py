@@ -65,7 +65,7 @@ def search():
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
                 top_word_occurances=summarizer.get_top_word_occurances(),
-                debug=True,
+                debug=app.debug,
                 movie_name=movie_name,
                 number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
@@ -139,7 +139,6 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--amazon',default=False, action='store_true')
-    parser.add_argument('--debug',default=False, action='store_true')
     args = parser.parse_args()
 
     if args.amazon:
