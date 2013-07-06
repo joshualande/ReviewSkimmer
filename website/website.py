@@ -14,7 +14,7 @@ from reviewskimmer.website import helpers
 from reviewskimmer.utils.list import flatten_dict
 
 app = Flask(__name__)
-website = app # This is needed by elastic beanstalk
+application = app # This is needed by elastic beanstalk
 
 from reviewskimmer.database.dbconnect import IMDBDatabaseConnector
 
