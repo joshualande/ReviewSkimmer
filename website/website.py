@@ -135,13 +135,4 @@ def secret():
 
 
 if __name__ == '__main__':
-
-    import argparse
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('--amazon',default=False, action='store_true')
-    args = parser.parse_args()
-
-    if args.amazon:
-        app.run(host='0.0.0.0',port=80)
-    else:
-        app.run() 
+    app.run() 
