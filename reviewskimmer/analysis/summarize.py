@@ -1,7 +1,3 @@
-try:
-    from collections import OrderedDict
-except:
-    from ordereddict import OrderedDict
 import math
 from operator import itemgetter
 import nltk.data
@@ -87,7 +83,7 @@ class ReviewSummarizer(object):
                 key=lambda x: x[1]['weighted_num'], 
                 reverse=True)
 
-        top_word_occurances=OrderedDict(sorted_occurances[:self.num_occurances])
+        top_word_occurances=sorted_occurances[:self.num_occurances]
         return top_word_occurances
 
     def _find(self,word,classification):
@@ -103,7 +99,7 @@ class ReviewSummarizer(object):
     def _find_top_quotes(self,top_word_occurances):
         top_quotes=[]
         self._raw_top_quotes=[]
-        for word,v in top_word_occurances.items():
+        for word,v in top_word_occurances:
             # find top review where word occurs
 
             classification = v['classification']

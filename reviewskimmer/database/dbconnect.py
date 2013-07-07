@@ -1,5 +1,6 @@
 from datetime import datetime
 import pickle
+import traceback
 import urllib
 import pandas.io.sql as psql
 
@@ -92,16 +93,27 @@ class IMDBDatabaseConnector(object):
         else:
             return urllib.unquote(url)
 
-    def execute(self, a, b=None):
+    def modify_db(self, a, b=None):
+        try:
+            c=self.db.cursor()
+            ex=c.execute(a,b)
+            self.db.commit()
+        except Exception, ex:
+            print "Error running query %s" % ex
+            traceback.print_exc()
+        finally:
+            c.close()
+
+    def query_db(self, a, b=None):
         try:
             c=self.db.cursor()
             ex=c.execute(a,b)
             return c.fetchall()
         except Exception, ex:
             print "Error running query %s" % ex
+            traceback.print_exc()
         finally:
             c.close()
-
 
     def _add_movie_description(self,movie):
         """ Add in the IMDB descriptions of the movie. """
@@ -117,7 +129,7 @@ class IMDBDatabaseConnector(object):
         rs_imdb_poster_thumbnail_url=self.format_url(movie['imdb_poster_thumbnail_url'])
         rs_imdb_description=movie['imdb_description']
 
-        self.execute("""
+        self.modify_db("""
             INSERT INTO rs_movies
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
             (rs_imdb_movie_id, rs_movie_name, rs_budget,
@@ -160,7 +172,7 @@ class IMDBDatabaseConnector(object):
         imdb_review_url=self.format_url(review['imdb_review_url'])
         imdb_review_text=review['imdb_review_text']
 
-        self.execute("""
+        self.modify_db("""
             INSERT INTO rs_reviews 
             VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""", 
             (rs_imdb_movie_id,rs_imdb_reviewer_id,reviwer,review_movie_score, 
@@ -183,7 +195,7 @@ class IMDBDatabaseConnector(object):
 
     def _del_movie_description(self,imdb_movie_id):
 
-        self.execute("""
+        self.modify_db("""
             DELETE FROM rs_movies
             WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
@@ -192,7 +204,7 @@ class IMDBDatabaseConnector(object):
     def _del_all_reviews_for_movie(self,imdb_movie_id):
 	""" Remove every review for a movie specified by imdb_movie_id.
 	"""
-        self.execute("""
+        self.modify_db("""
             DELETE FROM rs_reviews
             WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
@@ -206,8 +218,9 @@ class IMDBDatabaseConnector(object):
 
     def in_review_database(self,imdb_movie_id):
 
-        f=self.execute("""
-            select * FROM rs_movies WHERE rs_imdb_movie_id=%s""",
+        f=self.query_db("""
+            SELECT * FROM rs_movies 
+            WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         l=len(f)
@@ -217,8 +230,9 @@ class IMDBDatabaseConnector(object):
     def in_movie_database(self,imdb_movie_id):
         """ Test if a movie with a given imdb movie id is in the database. """
 
-        f=self.execute("""
-            select * FROM rs_movies WHERE rs_imdb_movie_id=%s""",
+        f=self.query_db("""
+            SELECT * FROM rs_movies 
+            WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         l=len(f)
@@ -227,7 +241,7 @@ class IMDBDatabaseConnector(object):
 
     def get_newest_imdb_movie_id(self,movie_name):
             
-        l=self.execute("""
+        l=self.query_db("""
             SELECT rs_imdb_movie_id 
             FROM rs_movies WHERE rs_movie_name=%s 
             ORDER BY rs_release_date DESC
@@ -242,8 +256,9 @@ class IMDBDatabaseConnector(object):
     def get_imdb_movie_id(self,movie_name):
         """ Test if a movie with a given imdb movie id is in the database. """
 
-        l=self.execute("""
-            SELECT rs_imdb_movie_id FROM rs_movies WHERE rs_movie_name=%s""",
+        l=self.query_db("""
+            SELECT rs_imdb_movie_id FROM rs_movies 
+            WHERE rs_movie_name=%s""",
             (movie_name,)
         )
         assert len(l)<=1
@@ -264,14 +279,18 @@ class IMDBDatabaseConnector(object):
         if not self.in_review_database(imdb_movie_id):
             raise Exception("Movie %d is not in the database" % imdb_movie_id)
     
-        query="""SELECT * FROM rs_reviews WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
+        query="""
+            SELECT * FROM rs_reviews 
+            WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
         df_mysql = psql.frame_query(query, con=self.db)
 
         return df_mysql
 
     def get_movie(self,imdb_movie_id):
     
-        query="""SELECT * FROM rs_movies WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
+        query="""
+            SELECT * FROM rs_movies 
+            WHERE rs_imdb_movie_id=%s""" % imdb_movie_id
         df_mysql = psql.frame_query(query, con=self.db)
 
         if len(df_mysql) == 0:
@@ -294,7 +313,7 @@ class IMDBDatabaseConnector(object):
 
     def does_quotes_cache_exist(self):
 
-        l=self.execute("""
+        l=self.query_db("""
             SELECT count(*)
             FROM information_schema.TABLES
             WHERE (TABLE_SCHEMA = 'reviewskimmer') 
@@ -319,8 +338,9 @@ class IMDBDatabaseConnector(object):
 
     def are_quotes_cached(self,imdb_movie_id):
 
-        f=self.execute("""
-            select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
+        f=self.query_db("""
+            SELECT * FROM rs_quotes_cache 
+            WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         l=len(f)
@@ -328,7 +348,7 @@ class IMDBDatabaseConnector(object):
 
     def set_cached_quotes(self, imdb_movie_id, _data):
 
-        self.execute("""
+        self.modify_db("""
             INSERT INTO rs_quotes_cache
             VALUES (%s,%s)""", 
             (imdb_movie_id, pickle.dumps(_data))
@@ -338,8 +358,9 @@ class IMDBDatabaseConnector(object):
         if not self.are_quotes_cached(imdb_movie_id):
             raise Exception("No cached quotes for movie %s" % imdb_movie_id)
 
-        l=self.execute("""
-            select * FROM rs_quotes_cache WHERE rs_imdb_movie_id=%s""",
+        l=self.query_db("""
+            SELECT * FROM rs_quotes_cache 
+            WHERE rs_imdb_movie_id=%s""",
             (imdb_movie_id,)
         )
         assert len(l)==1

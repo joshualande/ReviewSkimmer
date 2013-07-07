@@ -8,6 +8,7 @@ from os.path import expandvars
 import urllib
 from reviewskimmer.imdb.poster import scrape_movie_poster_thumbnail,injest_movie_poster_into_s3
 from reviewskimmer.imdb import scrape
+from reviewskimmer.utils.strings import strip_unicode
 
 def get_search_url(imdb_movie_id,connector):
     movie_name=connector.get_movie_name(imdb_movie_id)
@@ -39,10 +40,11 @@ def format_quotes(top_quotes):
     formatted_quotes=[]
 
     for quote in top_quotes:
-        word=quote['word']
+        word=strip_unicode(quote['word'])
+        print word,'taco',[strip_unicode(i['text']) for i in quote['more_quotes']]
 
         formatted_more_quotes = ['&quot%s&quot &#8212; <a href=&quot%s&quot>%s</a>' % \
-                (i['text'].replace(word,'<a><b>%s</b></a>' % word).replace('"','&quot'),
+                (strip_unicode(i['text']).replace(word,'<a><b>%s</b></a>' % word).replace('"','&quot'),
                     i['reviewer_url'],
                     i['reviewer']) \
                 for i in quote['more_quotes']]
@@ -50,7 +52,7 @@ def format_quotes(top_quotes):
         content = '<br><br>'.join(formatted_more_quotes)
 
         first_quote = quote['first_quote']
-        first_quote_html = first_quote['text']
+        first_quote_html = strip_unicode(first_quote['text'])
         first_quote_html = '<span style="font-size:24px">"%s"</span>&#8212;<a href="%s">%s</a>' % (first_quote_html,first_quote['reviewer_url'],first_quote['reviewer'])
         first_quote_html = first_quote_html.replace(word,
                 """<a id="hover" 
