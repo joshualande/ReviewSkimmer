@@ -72,9 +72,7 @@ def search():
 
         return render_template('search.html', 
                 formatted_quotes=formatted_quotes,
-                top_word_occurances=summarizer.get_top_word_occurances(),
                 movie_name=movie_name,
-                number_reviews=summarizer.get_nreviews(),
                 imdb_movie_id=imdb_movie_id,
                 thumbnail_url_html=thumbnail_url_html)
 
@@ -113,13 +111,13 @@ def secret():
                 helpers.get_bottom_for_website(flask.g.connector)
         for imdb_movie_id in all_movies:
             print 'Loading movie:',imdb_movie_id
-            summarizer = _get_summarizer(imdb_movie_id)
+            summarizer = _get_summarizer(flask.g.connector,imdb_movie_id)
 
         message='<div class="alert alert-success">The popular movies were cached!</div>'
 
     elif user_request == 'clearcache':
         flask.g.connector.delete_quotes_cache()
-        message='<div class="alert alert-success">The cache was cleared!<div>'
+        message='<div class="alert alert-success">The cache was cleared!</div>'
     elif user_request == 'injestmovie':
         try:
             imdb_movie_id=int(request.args.get('imdb_movie_id', None))
